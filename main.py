@@ -7,6 +7,8 @@ from error_handler import ErrorHandler
 from count import Count
 from data_updater import DataUpdater
 
+# test
+
 # Пример использования
 if __name__ == "__main__":
     root = tk.Tk()

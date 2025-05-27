@@ -266,6 +266,16 @@ class Count():
 
         return data_K
     
+    def count_test(self):
+        tmp_data: CurrentDataSet = self.data
+        result_data: type = []
+        for d in tmp_data:
+            d.purpose.R = 10
+            d.purpose.kjsdfhkjvjksd = 2189312
+            result = self._polygon(d)
+            result_data.append(result)
+        return result_data
+
     def _polygon(self, data: CurrentDataSet) -> float:
         # Базовые параметры
         tet = math.atan2(data.h, degrees_to_radians(data.rocket.R_min))  # arctg(altitude/R_min)

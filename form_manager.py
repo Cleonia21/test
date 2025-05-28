@@ -167,11 +167,11 @@ class InputForm:
                 ("Количество ракет", "n_rocket", "int"),
                 ("Сигма Z", "sigma_z", "float"),
                 ("Пси макс", "psi_max", "float"),
-                ("Время цели", "t_aim", "float"),
+                ("Время прицеливания", "t_aim", "float"),
                 ("Скорость", "v", "float"),
-                ("Макс. зазор", "gap_max", "float"),
-                ("Видимость", "visibility", "float"),
-                ("P_detect (матрица)", "P_detect", "matrix")
+                ("Макс. перегрузка", "gap_max", "float"),
+                ("Радио заметность", "visibility", "float"),
+                ("P_обнаружения (матрица)", "P_detect", "matrix")
             ]
         
         elif self.form_type == "Rocket":
@@ -181,35 +181,35 @@ class InputForm:
                 ("R мин", "R_min", "float"),
                 ("R макс", "R_max", "float"),
                 ("Средняя скорость", "midle_speed", "float"),
-                ("Угол воздействия", "angle_effect", "float")
+                ("Угол действия", "angle_effect", "float")
             ]
             
         elif self.form_type == "Purpose":
             fields = [
                 ("Название", "name", "str"),
-                ("Параметр a", "a", "float"),
-                ("Параметр b", "b", "float"),
-                ("Высота h", "h", "float"),
+                ("Длинна", "a", "float"),
+                ("Ширина", "b", "float"),
+                ("Высота", "h", "float"),
                 ("R поражения", "R_defeat", "float"),
-                ("Среднее число", "average_number", "float"),
+                ("Среднее число попаданий", "average_number", "float"),
                 ("X координата", "x_purpose", "float"),
-                ("Y координата", "y_purpose", "float")
+                ("Z координата", "y_purpose", "float")
             ]
             
         elif self.form_type == "AirDefense":
             fields = [
                 ("Название", "name", "str"),
                 ("Количество ПВО", "n_defense", "int"),
-                ("Количество ракет", "n_rocket_d", "int"),
-                ("Скорость ПВО", "v_defense", "float"),
+                ("Количество ЗУР", "n_rocket_d", "int"),
+                ("Скорость ЗУР", "v_defense", "float"),
                 ("Время пассивное", "t_passive", "float"),
-                ("Время смены", "t_changing", "float"),
-                ("Время защиты", "t_def", "float"),
+                ("Время смены цели", "t_changing", "float"),
+                ("Время оценки", "t_def", "float"),
                 ("X координата (матрица)", "x_defense", "matrix"),
-                ("Y координата (матрица)", "y_defense", "matrix"),
+                ("Z координата (матрица)", "y_defense", "matrix"),
                 ("L мин", "l_min", "float"),
                 ("L макс", "l_max", "float"),
-                ("Угол воздействия", "angle_effect", "float"),
+                ("Угол действия", "angle_effect", "float"),
                 ("Ширина защиты", "width_defense", "float"),
                 ("Макс. высота", "h_max", "float"),
                 ("P поражения", "P_defeat", "float"),
@@ -219,7 +219,7 @@ class InputForm:
         elif self.form_type == "Relief":
             fields = [
                 ("Название", "name", "str"),
-                ("P видимости (матрица)", "P_see", "matrix")
+                ("P прямой видимости (матрица)", "P_see", "matrix")
             ]
         
         self.entries = {}

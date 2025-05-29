@@ -156,8 +156,8 @@ class Count():
             plane_rocket_stats[key] = plane_rocket_stats.get(key, NumberContainer(0, 0)) + container
 
             # Update plane_velocity_altitude_stats
-            key = (prob_data.plane_name, prob_data.v, prob_data.h)
-            plane_velocity_altitude_stats[key] = plane_velocity_altitude_stats.get(key, NumberContainer(0, 0)) + container
+            key = (prob_data.plane_name, prob_data.h)
+            plane_velocity_altitude_stats[key] = {plane_velocity_altitude_stats.get(key, NumberContainer(0, 0)) + container, prob_data.v}
 
         # Process plane number statistics
         plane_stats = {}
@@ -189,10 +189,10 @@ class Count():
         # Process velocity-altitude data for best plane
         altitude_stats = defaultdict(lambda: {"velocity": [], "k_values": []})
         
-        for (plane_name, velocity, altitude), container in plane_velocity_altitude_stats.items():
+        for (plane_name, velocity, altitude), data in plane_velocity_altitude_stats.items():
             if plane_name == best_plane_name:
-                avg_k = container.float_value / container.int_value
-                altitude_stats[altitude]["velocity"].append(velocity)
+                avg_k = data[0].float_value / data[0].int_value
+                altitude_stats[altitude]["velocity"].append(data[1])
                 altitude_stats[altitude]["k_values"].append(avg_k)
 
         return plane_stats, plane_rocket_scores, dict(altitude_stats)

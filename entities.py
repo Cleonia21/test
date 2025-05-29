@@ -4,7 +4,7 @@ class Plane:
     def __init__(self):
         self.name: str = ""
         self.n_rocket: int = 0
-        self.sigma_z: int = 0.0
+        self.sigma_z: float = 0.0
         self.psi_max: float = 0.0
         self.t_aim: float = 0.0
         self.v: float = 0.0

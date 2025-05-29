@@ -168,7 +168,7 @@ class InputForm:
                 ("Сигма Z", "sigma_z", "float"),
                 ("Пси макс", "psi_max", "float"),
                 ("Время прицеливания", "t_aim", "float"),
-                ("Скорость", "v", "float"),
+                #("Скорость", "v", "float"),
                 ("Макс. перегрузка", "gap_max", "float"),
                 ("Радио заметность", "visibility", "float"),
                 ("P_обнаружения (матрица)", "P_detect", "matrix")

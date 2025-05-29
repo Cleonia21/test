@@ -145,6 +145,8 @@ class Count():
             data_K = self._calculate_probabilities(currentData)
             K = self._cout_K(data_K)
 
+            #print(data_K.plane_name, K)
+
             numberContainer = NumberContainer(1, K)
             if (data_K.plane_name, data_K.plane_num) in planeNameAndNumByK:
                 planeNameAndNumByK[(data_K.plane_name, data_K.plane_num)] += numberContainer
@@ -192,6 +194,8 @@ class Count():
         W = (data.P_def * data.P4 * data.W_a + (data.W_a_max - data.W_a) * data.P_def * data.P5 + (1 - data.W_a_max))
         Q = (1 - data.P_prl1 * data.P_prl2) * data.W_a + (data.W_a_max - data.W_a) * (1 - (1 - data.P_prl1 * data.P_prl2)**2) + (1 - data.W_a_max) * (1 - data.P_prl1)
         K = W / Q
+        #if K < 0:
+           # print(data.W_a_max)
         return K
 
     def _calculate_probabilities(self, data: CurrentDataSet):
@@ -231,11 +235,14 @@ class Count():
         probab_average = self._choice(data.plane.P_detect, D3)
         p_z = self._P_z(data.plane.sigma_z, data.z)
         W_a_max = probab_average * p_z
+        if W_a_max > 1:
+            print(probab_average, data.plane.P_detect)
 
         D_ob = self._ZVA(probabSurlData)
         probab_average = self._choice(data.plane.P_detect, D_ob)
         p_z = self._P_z(data.plane.sigma_z, data.z)
         W_a = probab_average * p_z
+
 
         P_def = self._polygon(data)
 

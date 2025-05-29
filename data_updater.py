@@ -51,7 +51,7 @@ class DataUpdater:
             # Получаем новые данные
             dataGraf1, dataGraf2, dataGraf3 = self.count.count()
 
-            #print(dataGraf3)
+            print(dataGraf3)
             
             # Обновляем графики в основном потоке
             self.window.root.after(0, self._update_charts, dataGraf1, dataGraf2, dataGraf3)

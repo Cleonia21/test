@@ -366,10 +366,17 @@ class Count():
 
             D_pys = segment_length
             N = 0.0
+            P_see_r = 0.0
             while D_pys > 0 or N < data.n_rocket_d:
                 t_per = D_pys / (data.v + data.v_defense) + data.t_def
+                if data.h == 50:
+                    P_see_r = self._choice(data.P_see, D_pys)
+                if data.h > 50:
+                    P_see_r = self._choice(data.P_see, D_pys) + 0.1 * data.h - 50 / 50
+                if P_see_r > 1:
+                    P_see_r = 1
                 if t_per * data.v > D_pys:
-                    P_detect_current = self._choice(data.P_detect, D_pys)
+                    P_detect_current = self._choice(data.P_detect, D_pys) * P_see_r
                     N += P_detect_current
                 D_pys -= data.v * t_per
 
@@ -415,10 +422,17 @@ class Count():
 
             D_pys = segment_length
             N = 0.0
+            P_see_r = 0.0
             while D_pys > 0 and N < data.n_rocket_d:
                 t_per = D_pys / (data.v_defense - data.v) + data.t_def
+                if data.h == 50:
+                    P_see_r = self._choice(data.P_see, D_pys)
+                if data.h > 50:
+                    P_see_r = self._choice(data.P_see, D_pys) + 0.1 * data.h - 50 / 50
+                if P_see_r > 1:
+                    P_see_r = 1
                 if t_per * data.v > D_pys:
-                    P_detect_current = self._choice(data.P_detect, D_pys)
+                    P_detect_current = self._choice(data.P_detect, D_pys) * P_see_r
                     N += P_detect_current
                 D_pys -= data.v * t_per
 
@@ -433,109 +447,7 @@ class Count():
         P_all_survive = (1 - P_kill)
 
         return P_all_survive
-    """""
-    def _P_5(self, data: ProbabSurlData):
-        g = 9.81  # Ускорение свободного падения (м/с²)
 
-        # Расчет D1, y_0, fi_0, R
-        z = data.z  # Текущая координата Z (максимальная дальность)
-        sqrt_part = math.sqrt(data.R_min ** 2 - z ** 2)
-        D1 = math.sqrt(data.R_min ** 2 + (data.v * data.t_aim) ** 2 + 2 * data.v * data.t_aim * sqrt_part)
-        y_0 = math.sqrt(data.R_min ** 2 + (data.v * data.t_aim) ** 2 + 2 * data.v * data.t_aim * data.angle_effect)
-        fi_0 = math.asin(degrees_to_radians(data.R_min * data.angle_effect / y_0))
-        R = data.v ** 2 / (g * math.sqrt(data.gap_max ** 2 - 1))
-
-        # Решение уравнения для alf методом Ньютона
-        def equation(alf):
-            return z - (y_0 * math.sin(degrees_to_radians(alf)) + R * (1 - math.cos(degrees_to_radians(alf - fi_0))))
-
-        alf = 0.5  # Начальное приближение
-        tolerance = 1e-6
-        max_iter = 100
-
-        for _ in range(max_iter):
-            f = equation(alf)
-            df = y_0 * math.cos(degrees_to_radians(alf)) - R * math.sin(degrees_to_radians(alf - fi_0))
-            alf_new = alf - f / df
-
-            if abs(alf_new - alf) < tolerance:
-                break
-            alf = alf_new
-
-        # Расчет x_2 и D2
-        x_2 = y_0 * math.cos(degrees_to_radians(alf)) + R * math.sin(degrees_to_radians(alf - fi_0))
-        D2 = math.sqrt(x_2 ** 2 + z ** 2)
-
-        # Расчет D3 (максимальная дальность по углу psi_max)
-        D3 = z / math.sin(degrees_to_radians(data.psi_max))
-
-        total_N = 0
-        N_per_sphere = []
-
-        # Обработка каждой сферы защиты
-        for i in range(data.n_defense):
-            sphere_x = data.x_defense[i]
-            sphere_y = data.y_defense[i]
-            sphere_radius = (data.l_min + data.l_max) / 2  # Средний радиус сферы защиты
-
-            # Проверка пересечения траектории со сферой
-            distance_to_axis = math.sqrt((sphere_x - 0) ** 2 + (sphere_y - data.h) ** 2)
-            if distance_to_axis > sphere_radius:
-                N_per_sphere.append(0)
-                continue
-
-            # Проверка условий D1 > D2 и D3
-            if D1 > D2 and D3 < D1:
-                # Расчет длины отрезков между y_defense+l_min и правой границей сферы
-                right_bound = sphere_x + math.sqrt(sphere_radius ** 2 - (data.h - sphere_y) ** 2 - z ** 2)
-                segment_length = max(0, right_bound - (sphere_y + data.l_min))
-
-                D_pys = segment_length
-                N = 0
-                while D_pys > 0 and N < data.n_rocket_d:
-                    t_per = D_pys / (data.v + data.v_defense) + data.t_def
-                    if t_per * data.v > D_pys:
-                        N += 1
-                    D_pys -= data.v * t_per
-                N_per_sphere.append(min(N, data.n_rocket_d))
-                total_N += min(N, data.n_rocket_d)
-            else:
-                # Расчет суммы двух отрезков (зоны D2 и D3)
-                right_bound = sphere_x + math.sqrt(sphere_radius ** 2 - (data.h - sphere_y) ** 2 - z ** 2)
-
-                # Первый отрезок (зона D2 или D3)
-                segment1 = 0
-                if right_bound > min(D2, D3) and (data.h - sphere_y) ** 2 + z ** 2 <= sphere_radius ** 2:
-                    if D2 > D3:
-                        x_start = x_2
-                    else:
-                        x_start = math.sqrt(D3 ** 2 - z ** 2)
-                    segment1 = max(0, right_bound - x_start)
-
-                # Второй отрезок (зона между D2 и D3)
-                segment2 = 0
-                if right_bound > min(D2, D3):
-                    left_bound = sphere_x - math.sqrt(sphere_radius ** 2 - (data.h - sphere_y) ** 2 - z ** 2)
-                    segment2 = max(0, min(right_bound, max(D2, D3)) - max(left_bound, 0))
-
-                D_pys = segment1 + segment2
-                N = 0
-                while D_pys > 0 and N < data.n_rocket_d:
-                    t_per = D_pys / (data.v + data.v_defense) + data.t_def
-                    if t_per * data.v > D_pys:
-                        N += 1
-                    D_pys -= data.v * t_per
-                N_per_sphere.append(min(N, data.n_rocket_d))
-                total_N += min(N, data.n_rocket_d)
-
-        # Итоговая вероятность поражения одной цели
-        P_kill = data.P_detect * (data.P_defeat ** (total_N / data.n_planes))
-
-        # Вероятность, что все самолёты выживут
-        P_all_survive = (1 - P_kill) ** data.n_planes
-
-        return P_all_survive
-    """""
     def _P_4(self, data: ProbabSurlData):
         g = 9.81  # ускорение свободного падения (м/с²)
 
@@ -590,6 +502,7 @@ class Count():
             # Инициализация переменных для текущей сферы
             D_pys = 0.0
             N = 0.0
+            P_see_r = 0.0
 
             # Проверка условий D1 > D2 и D3
             if D1 > D2 and D3 < D1:
@@ -600,9 +513,15 @@ class Count():
                 # Расчет количества ракет и вероятности поражения для этого отрезка
                 while D_pys > 0 and N < data.n_rocket_d:
                     t_per = D_pys / (data.v + data.v_defense) + data.t_def
+                    if data.h == 50:
+                        P_see_r = self._choice(data.P_see, D_pys)
+                    if data.h > 50:
+                        P_see_r = self._choice(data.P_see, D_pys) + 0.1 * data.h - 50 / 50
+                    if P_see_r > 1:
+                        P_see_r = 1
                     if t_per * data.v > D_pys:
-                        P_detect_current = self._choice(data.P_detect, D_pys)
-                        N  += P_detect_current
+                        P_detect_current = self._choice(data.P_detect, D_pys) * P_see_r
+                        N += P_detect_current
                         D_pys -= data.v * t_per
                         # Вероятность поражения на этом участке
                     else:
@@ -629,14 +548,22 @@ class Count():
 
                   D_pys = segment1 + segment2
                   N = 0
+                  P_see_r = 0.0
+
                   while D_pys > 0 and N < data.n_rocket_d:
-                        t_per = D_pys / (data.v + data.v_defense) + data.t_def
-                        if t_per * data.v > D_pys:
-                            P_detect_current = self._choice(data.P_detect, D_pys)
-                            N += P_detect_current
-                            D_pys -= data.v * t_per
-                        else:
-                            break
+                      t_per = D_pys / (data.v + data.v_defense) + data.t_def
+                      if data.h == 50:
+                          P_see_r = self._choice(data.P_see, D_pys)
+                      if data.h > 50:
+                          P_see_r = self._choice(data.P_see, D_pys) + 0.1 * data.h - 50 / 50
+                      if P_see_r > 1:
+                          P_see_r = 1
+                      if t_per * data.v > D_pys:
+                          P_detect_current = self._choice(data.P_detect, D_pys) * P_see_r
+                          N += P_detect_current
+                          D_pys -= data.v * t_per
+                      else:
+                          break
                   N = min(N, data.n_rocket_d)
                   N_sym += N
 
@@ -716,17 +643,7 @@ class Count():
     from typing import List, Optional
 
     def _choice(self, P_detect, D_ob):
-        """
-        Функция для поиска значения в двумерном массиве P_detect по заданному D_ob.
-        С проверкой на пустые значения и некорректные входные данные.
 
-        Параметры:
-        P_detect (list of lists): Двумерный массив, где первый столбец - значения D, второй - соответствующие значения P.
-        D_ob (float): Значение D, для которого нужно найти соответствующее P.
-
-        Возвращает:
-        float: Найденное значение P или None при ошибке.
-        """
         # Проверка на пустые входные данные
         if not P_detect or not isinstance(P_detect, list) or len(P_detect) == 0:
             return None

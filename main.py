@@ -6,8 +6,7 @@ from form_manager import FormManager
 from count import Count
 from data_updater import DataUpdater
 from error_handler import ErrorHandler
-
-# test
+from db_cache import DBCache
 
 # Пример использования
 if __name__ == "__main__":
@@ -15,6 +14,7 @@ if __name__ == "__main__":
     root.geometry("1500x1000")
 
     error_handler = ErrorHandler()
+    cache = DBCache()
 
     window = WindowBuilder(root)
     window.build()

@@ -1,4 +1,4 @@
-import numpy as np
+from typing import Type, Union
 
 class Plane:
     def __init__(self):
@@ -54,3 +54,13 @@ class Relief:
     def __init__(self):
         self.name: str = ""
         self.P_see: list = [[]]  # 2D массив вероятностей видимости
+
+
+BASE_CLASSES_TYPE = Type[Union[Plane, Rocket, Purpose, AirDefense, Relief]]
+BASE_CLASSES_MAP = {
+    Plane: "Plane",
+    Rocket: "Rocket",
+    Purpose: "Purpose",
+    AirDefense: "AirDefense",
+    Relief: "Relief"
+}

@@ -5,21 +5,22 @@ from window_builder import FormData
 from entities import *
 from typing import Tuple
 from error_handler import ErrorHandler
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any, Union, Type
+from db_cache import DBCache
 
 class FormManager:
-    def __init__(self, db_manager: DatabaseManager, form_data: FormData, form_type: str, error_handler: ErrorHandler):
+    def __init__(self, db_manager: DatabaseManager, form_data: FormData, form_type: BASE_CLASSES_TYPE, db_cache: DBCache, error_handler: ErrorHandler):
         self.db_manager = db_manager
         self.error_handler = error_handler
         self.form_data = form_data
         self.form_type = form_type
         self.msgViewer = MsgViewer(form_data.msg_label)
-        self.data_viewer = DataViewer(error_handler)  # Добавляем DataViewer
+        self.data_viewer = DataViewer(error_handler, db_cache)
         self._setup_form()
     
     def _setup_form(self):
         """Настройка элементов формы"""
-        self.form_data.title.config(text=self.form_type)
+        self.form_data.title.config(text=BASE_CLASSES_MAP[self.form_type])
         self.input_form = InputForm(self.form_data.form, self.form_type)
         
         self.form_data.save_button.config(command=self._on_save)
@@ -34,15 +35,15 @@ class FormManager:
             return
         obj = self.input_form.get_object()
         if obj:
-            if self.form_type == "Plane":
+            if self.form_type == Plane:
                 self.db_manager.save_plane(obj)
-            elif self.form_type == "Rocket":
+            elif self.form_type == Rocket:
                 self.db_manager.save_rocket(obj)
-            elif self.form_type == "Purpose":
+            elif self.form_type == Purpose:
                 self.db_manager.save_purpose(obj)
-            elif self.form_type == "AirDefense":
+            elif self.form_type == AirDefense:
                 self.db_manager.save_air_defense(obj)
-            elif self.form_type == "Relief":
+            elif self.form_type == Relief:
                 self.db_manager.save_relief(obj)
     
     def _on_delete(self):
@@ -55,15 +56,15 @@ class FormManager:
         try:
             obj_id = int(obj_id)
             success = False
-            if self.form_type == "Plane":
+            if self.form_type == Plane:
                 success = self.db_manager.delete_plane(obj_id)
-            elif self.form_type == "Rocket":
+            elif self.form_type == Rocket:
                 success = self.db_manager.delete_rocket(obj_id)
-            elif self.form_type == "Purpose":
+            elif self.form_type == Purpose:
                 success = self.db_manager.delete_purpose(obj_id)
-            elif self.form_type == "AirDefense":
+            elif self.form_type == AirDefense:
                 success = self.db_manager.delete_air_defense(obj_id)
-            elif self.form_type == "Relief":
+            elif self.form_type == Relief:
                 success = self.db_manager.delete_relief(obj_id)
                 
             if success:
@@ -79,33 +80,41 @@ class FormManager:
     def _on_show(self):
         """Обработчик отображения данных"""
         try:
-            if self.form_type == "Plane":
+            if self.form_type == Plane:
                 data = self.db_manager.get_all_planes()
-            elif self.form_type == "Rocket":
+            elif self.form_type == Rocket:
                 data = self.db_manager.get_all_rockets()
-            elif self.form_type == "Purpose":
+            elif self.form_type == Purpose:
                 data = self.db_manager.get_all_purposes()
-            elif self.form_type == "AirDefense":
+            elif self.form_type == AirDefense:
                 data = self.db_manager.get_all_air_defenses()
-            elif self.form_type == "Relief":
+            elif self.form_type == Relief:
                 data = self.db_manager.get_all_reliefs()
             else:
                 data = []
             
-            self.data_viewer.show_data(data, self.form_type)  # Используем DataViewer
+            self.data_viewer.show_data(data, BASE_CLASSES_MAP[self.form_type], self.form_type)  # Используем DataViewer
         except Exception as e:
             self.msgViewer.show_message(tuple([False, f"Ошибка при получении данных: {str(e)}"]))
 
 class DataViewer:
-    def __init__(self, error_handler: 'ErrorHandler'):
+    def __init__(self, error_handler: ErrorHandler, db_cache: DBCache):
         self.error_handler = error_handler
+        self.db_cache = db_cache
+        self.current_data_type = None  # Тип данных, отображаемых в текущий момент
+        self.error_label = None
+        self.msgViewer = None
+        self.selected_items = set()     # Множество выбранных ID строк
     
-    def show_data(self, data: List[Any], title: str) -> None:
-        """Отображает данные в новом окне в виде таблицы с поддержкой вложенных структур"""
+    def show_data(self, data: List[Any], title: str, data_type: BASE_CLASSES_TYPE) -> None:
+        """Отображает данные в новом окне с поддержкой выбора и кэширования строк"""
         if not data:
             self.error_handler.handle(Exception("No data"), "Нет данных для отображения", False)
             return
-            
+        
+        self.current_data_type = data_type
+        self.selected_items.clear()
+        
         window = self._create_base_window(title)
         frame = self._create_scrollable_frame(window)
         tree, scroll_x, scroll_y = self._create_treeview_with_scrollbars(frame)
@@ -114,7 +123,87 @@ class DataViewer:
         self._setup_treeview_columns(tree, columns)
         item_id_to_index = self._populate_treeview_data(tree, data, columns)
         self._setup_double_click_handler(tree, item_id_to_index, data, columns)
+        self._setup_selection_controls(window, tree, data, data_type)
         self._arrange_widgets_in_grid(tree, scroll_x, scroll_y, frame)
+
+    def _setup_selection_controls(self, parent: tk.Toplevel, tree: ttk.Treeview, 
+                                data: List[Any], data_type: BASE_CLASSES_TYPE) -> None:
+        """Добавляет элементы управления для выбора строк и работы с кэшем"""
+        control_frame = ttk.Frame(parent)
+        control_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        # Кнопки выбора
+        select_frame = ttk.LabelFrame(control_frame, text="Выбор строк")
+        select_frame.pack(side=tk.LEFT, padx=5)
+        
+        ttk.Button(select_frame, text="Выбрать все", 
+                 command=lambda: self._select_all_items(tree)).pack(side=tk.LEFT)
+        ttk.Button(select_frame, text="Снять выделение", 
+                 command=lambda: self._deselect_all_items(tree)).pack(side=tk.LEFT)
+        
+        # Кнопки кэша
+        if data_type is not None:
+            cache_frame = ttk.LabelFrame(control_frame, text="Работа с кэшем")
+            cache_frame.pack(side=tk.LEFT, padx=5)
+            
+            ttk.Button(cache_frame, text="Добавить в кэш", 
+                      command=lambda: self._add_selected_to_cache(tree, data, data_type)).pack(side=tk.LEFT)
+            ttk.Button(cache_frame, text="Очистить кэш", 
+                      command=lambda: self._clear_cache_for_type(data_type)).pack(side=tk.LEFT)
+            ttk.Button(cache_frame, text="Показать кэш", 
+                      command=self._show_cache_status).pack(side=tk.LEFT)
+            
+        # Label для отображения ошибок
+        self.error_label = ttk.Label(control_frame, text="", foreground="red")
+        self.error_label.pack(side=tk.RIGHT, padx=5)
+
+        self.msgViewer = MsgViewer(self.error_label, 20000)
+        
+        # Привязка событий выбора
+        tree.bind("<<TreeviewSelect>>", lambda e: self._update_selected_items(tree, data))
+
+    def _select_all_items(self, tree: ttk.Treeview) -> None:
+        """Выделяет все строки в таблице"""
+        for item in tree.get_children():
+            tree.selection_add(item)
+
+    def _deselect_all_items(self, tree: ttk.Treeview) -> None:
+        """Снимает выделение со всех строк"""
+        tree.selection_remove(*tree.selection())
+
+    def _update_selected_items(self, tree: ttk.Treeview, data: List[Any]) -> None:
+        """Обновляет множество выбранных элементов при изменении выделения"""
+        selected_ids = [tree.item(item)['values'][0] for item in tree.selection()]
+        self.selected_items = set(selected_ids)
+
+    def _add_selected_to_cache(self, tree: ttk.Treeview, data: List[Any], data_type: BASE_CLASSES_TYPE) -> None:
+        """Добавляет выбранные строки в кэш"""
+        if not self.selected_items:
+            self.msgViewer.show_message(tuple([False, "Не выбрано ни одной строки"]))
+            return
+        
+        # Получаем ID выбранных элементов (предполагаем, что первый столбец содержит ID)
+        selected_ids = []
+        for item in tree.selection():
+            values = tree.item(item)['values']
+            if values:
+                selected_ids.append(int(values[0]))
+        
+        if selected_ids:
+            self.db_cache.add_ids(data_type, selected_ids)
+            self.msgViewer.show_message(tuple([True, f"Добавлено {len(selected_ids)} элементов в кэш"]))
+        else:
+            self.msgViewer.show_message(tuple([False, "Не удалось получить ID выбранных элементов"]))
+
+    def _clear_cache_for_type(self, data_type: BASE_CLASSES_TYPE) -> None:
+        """Очищает кэш для указанного типа данных"""
+        self.db_cache.clear_ids(data_type)
+        self.msgViewer.show_message(tuple([True, f"Кэш для {BASE_CLASSES_MAP[data_type]} очищен"]))
+
+    def _show_cache_status(self) -> None:
+        """Показывает текущее состояние кэша"""
+        cache_info = str(self.db_cache)
+        self.msgViewer.show_message(tuple([True, f"Состояние кэша {cache_info}"]))
 
     def show_complex_data(self, data: Union[List, Dict], title: str) -> None:
         """Отображает сложные данные (списки/словари) в новом окне"""
@@ -125,11 +214,7 @@ class DataViewer:
         if isinstance(data, list) and data:
             self._setup_and_populate_list_data(tree, data)
         else:
-            self.error_handler.handle(
-                Exception("Для отображения данных ожидался двумерный List"),
-                "Нет данных для отображения или данные представлены не верно", 
-                True
-            )
+            self.msgViewer.show_message(tuple([False, "Нет данных для отображения или данные представлены не верно"]))
             return
         
         self._arrange_widgets_in_grid(tree, scroll_x, scroll_y, frame)
@@ -168,13 +253,19 @@ class DataViewer:
             tree.column(col, width=120, anchor=tk.CENTER)
 
     def _populate_treeview_data(self, tree: ttk.Treeview, data: List[Any], columns: List[str]) -> Dict[str, int]:
-        """Заполняет Treeview данными и возвращает соответствие ID строки индексу данных"""
+        """Заполняет Treeview данными с учетом выбранных элементов в кэше"""
         item_id_to_index = {}
         
         for index, item in enumerate(data):
             values = self._prepare_row_values(item, columns)
             item_id = tree.insert("", tk.END, values=values)
             item_id_to_index[item_id] = index
+            
+            # Проверяем, есть ли элемент в кэше
+            if self.current_data_type is not None and hasattr(item, 'id'):
+                if (self.current_data_type, item.id) in self.db_cache:
+                    tree.selection_add(item_id)
+                    self.selected_items.add(str(item.id))
             
             if self._has_complex_data(item, columns):
                 tree.item(item_id, tags=("has_complex",))
@@ -256,13 +347,14 @@ class DataViewer:
         return all(isinstance(row, list) and len(row) >= 2 for row in data)
 
 class MsgViewer:
-    def __init__(self, label_widget: ttk.Label):
+    def __init__(self, label_widget: ttk.Label, clear_time = 3000):
         """
         Инициализация обработчика сообщений с указанным виджетом Label.
         
         :param label_widget: виджет ttk.Label, в который будут выводиться сообщения
         """
         self.label = label_widget
+        self.clear_time = clear_time
         self._clear_id = None  # ID отложенного вызова очистки
         self._create_styles()
         
@@ -308,8 +400,8 @@ class MsgViewer:
         else:
             self.label.config(style="ErrorHandler.Error.TLabel")
         
-        # Запланировать очистку через 3 секунд (5000 мс)
-        self._clear_id = self.label.after(3000, self.clear)
+        # Запланировать очистку
+        self._clear_id = self.label.after(self.clear_time, self.clear)
     
     def clear(self):
         """Очищает Label и возвращает стандартный стиль."""
@@ -317,7 +409,7 @@ class MsgViewer:
         self._clear_id = None  # Сбрасываем ID таймера
 
 class InputForm:
-    def __init__(self, root, form_type="Plane"):
+    def __init__(self, root, form_type=BASE_CLASSES_TYPE):
         self.root = root
         self.form_type = form_type
         self.object = self._create_object()  # Создаем объект соответствующего класса
@@ -327,32 +419,24 @@ class InputForm:
     
     def _create_object(self):
         """Создает объект в зависимости от типа формы"""
-        classes = {
-            "Plane": Plane,
-            "Rocket": Rocket,
-            "Purpose": Purpose,
-            "AirDefense": AirDefense,
-            "Relief": Relief
-        }
-        return classes[self.form_type]()
+        return self.form_type()
     
     def _create_widgets(self):
         """Создает элементы формы для ввода данных"""
         # Поля ввода в зависимости от типа формы
-        if self.form_type == "Plane":
+        if self.form_type == Plane:
             fields = [
                 ("Название", "name", "str"),
                 ("Количество ракет", "n_rocket", "int"),
                 ("Сигма Z", "sigma_z", "float"),
                 ("Пси макс", "psi_max", "float"),
                 ("Время прицеливания", "t_aim", "float"),
-                #("Скорость", "v", "float"),
                 ("Макс. перегрузка", "gap_max", "float"),
                 ("Радио заметность", "visibility", "float"),
                 ("P_обнаружения (матрица)", "P_detect", "matrix")
             ]
         
-        elif self.form_type == "Rocket":
+        elif self.form_type == Rocket:
             fields = [
                 ("Название", "name", "str"),
                 ("Тип", "type", "str"),
@@ -362,7 +446,7 @@ class InputForm:
                 ("Угол действия", "angle_effect", "float")
             ]
             
-        elif self.form_type == "Purpose":
+        elif self.form_type == Purpose:
             fields = [
                 ("Название", "name", "str"),
                 ("Длинна", "a", "float"),
@@ -374,7 +458,7 @@ class InputForm:
                 ("Z координата", "y_purpose", "float")
             ]
             
-        elif self.form_type == "AirDefense":
+        elif self.form_type == AirDefense:
             fields = [
                 ("Название", "name", "str"),
                 ("Количество ПВО", "n_defense", "int"),
@@ -394,7 +478,7 @@ class InputForm:
                 ("P обнаружения (матрица)", "P_detect", "matrix")
             ]
             
-        elif self.form_type == "Relief":
+        elif self.form_type == Relief:
             fields = [
                 ("Название", "name", "str"),
                 ("P прямой видимости (матрица)", "P_see", "matrix")

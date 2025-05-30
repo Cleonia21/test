@@ -7,6 +7,7 @@ from count import Count
 from data_updater import DataUpdater
 from error_handler import ErrorHandler
 from db_cache import DBCache
+from entities import *
 
 # Пример использования
 if __name__ == "__main__":
@@ -21,8 +22,8 @@ if __name__ == "__main__":
 
     db = DatabaseManager()
 
-    for i, type in enumerate(["Plane", "Rocket", "Purpose", "AirDefense", "Relief"]):
-        FormManager(db, window.forms_data[i], type, error_handler)
+    for i, type in enumerate(BASE_CLASSES_MAP.keys()):
+        FormManager(db, window.forms_data[i], type, cache, error_handler)
 
     count = Count(db)
 

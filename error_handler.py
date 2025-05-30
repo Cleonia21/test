@@ -1,54 +1,60 @@
-import tkinter as tk
-from tkinter import ttk
-from typing import Tuple
+import logging
+from tkinter import messagebox
+import traceback
+from typing import Callable, Optional
 
 class ErrorHandler:
-    def __init__(self, label_widget: ttk.Label):
-        """
-        Инициализация обработчика сообщений с указанным виджетом Label.
-        
-        :param label_widget: виджет ttk.Label, в который будут выводиться сообщения
-        """
-        self.label = label_widget
-        self._create_styles()
-        
-    def _create_styles(self):
-        """Создает необходимые стили для виджета Label."""
-        style = ttk.Style()
-        
-        # Стиль для успешных сообщений
-        style.configure("ErrorHandler.Success.TLabel", 
-                      background="green", 
-                      foreground="white",
-                      padding=5)
-        
-        # Стиль для ошибок
-        style.configure("ErrorHandler.Error.TLabel", 
-                      background="red", 
-                      foreground="white",
-                      padding=5)
-        
-        # Стиль по умолчанию
-        style.configure("ErrorHandler.Default.TLabel",
-                      padding=5)
+    """Обработчик ошибок: логирует в консоль и показывает сообщение пользователю."""
     
-    def show_message(self, result: Tuple[bool, str]) -> None:
+    def __init__(self, app_name: str = "Приложение"):
         """
-        Отображает сообщение с цветным фоном на основе результата операции.
-        
-        :param result: Кортеж (статус_успеха, сообщение)
-                      где статус_успеха - bool (True = успех, False = ошибка)
+        :param app_name: Название приложения (для заголовка ошибки).
         """
-        is_success, message = result
-        self.clear()
+        self.app_name = app_name
+        self._setup_logging()
+
+    def _setup_logging(self):
+        """Настройка логирования в консоль."""
+        logging.basicConfig(
+            level=logging.ERROR,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            handlers=[logging.StreamHandler()]
+        )
+
+    def handle(
+        self,
+        error: Exception,
+        user_message: Optional[str] = None,
+        show_traceback: bool = False
+    ):
+        """
+        Обрабатывает ошибку: логирует и показывает сообщение.
         
-        # Устанавливаем текст и стиль
-        self.label.config(text=message)
-        if is_success:
-            self.label.config(style="ErrorHandler.Success.TLabel")
-        else:
-            self.label.config(style="ErrorHandler.Error.TLabel")
-    
-    def clear(self):
-        """Очищает Label и возвращает стандартный стиль."""
-        self.label.config(text="", style="ErrorHandler.Default.TLabel")
+        :param error: Исключение (Exception).
+        :param user_message: Сообщение для пользователя (если None, берётся str(error)).
+        :param show_traceback: Показывать ли технические детали (traceback) пользователю.
+        """
+        # Логируем ошибку
+        logging.error(f"Ошибка: {error}\n{traceback.format_exc()}")
+
+        # Формируем сообщение для пользователя
+        if user_message is None:
+            user_message = str(error)
+        
+        if show_traceback:
+            user_message += f"\n\nДетали:\n{traceback.format_exc()}"
+
+        # Показываем ошибку в GUI
+        messagebox.showerror(
+            title=f"Ошибка в {self.app_name}",
+            message=user_message
+        )
+
+    def wrap(self, func: Callable):
+        """Декоратор для автоматической обработки ошибок в функциях."""
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                self.handle(e)
+        return wrapper

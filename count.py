@@ -21,9 +21,6 @@ class CurrentDataSet:
         z: int
         plane_num: int
 
-        # def append(self, currentDataSet):
-        #     pass
-
 
 @dataclass
 class ProbabSurlData:
@@ -105,15 +102,14 @@ class Count():
         self._dataCollection()
 
     def _dataCollection(self):
-
-
         planes = self.db.get_all_planes()
         rockets = self.db.get_all_rockets()
         purposes = self.db.get_all_purposes()
         air_defences = self.db.get_all_air_defenses()
         reliefs = self.db.get_all_reliefs()
+
         if planes == None or rockets == None or purposes == None or air_defences == None or reliefs == None:
-            return
+            raise Exception("Один из объектов из базы данных пустой")
 
         for plane in planes:
             for purpose in purposes:
@@ -257,15 +253,15 @@ class Count():
 
         return data_K
     
-    def count_test(self):
-        tmp_data: CurrentDataSet = self.data
-        result_data: type = []
-        for d in tmp_data:
-            d.purpose.R = 10
-            d.purpose.kjsdfhkjvjksd = 2189312
-            result = self._polygon(d)
-            result_data.append(result)
-        return result_data
+    # def count_test(self):
+    #     tmp_data: CurrentDataSet = self.data
+    #     result_data: type = []
+    #     for d in tmp_data:
+    #         d.purpose.R = 10
+    #         d.purpose.kjsdfhkjvjksd = 2189312
+    #         result = self._polygon(d)
+    #         result_data.append(result)
+    #     return result_data
 
     def _polygon(self, data: CurrentDataSet) -> float:
         # Базовые параметры

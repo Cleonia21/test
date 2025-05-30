@@ -2,16 +2,17 @@ import tkinter as tk
 from tkinter import ttk
 from data_base import DatabaseManager
 from window_builder import FormData
-from error_handler import ErrorHandler
 from entities import *
 from typing import Tuple
+from error_handler import ErrorHandler
 
 class FormManager:
-    def __init__(self, form_data: FormData, errors: ErrorHandler, db_manager: DatabaseManager, form_type: str):
-        self.form_data = form_data
+    def __init__(self, db_manager: DatabaseManager, form_data: FormData, form_type: str, error_handler: ErrorHandler):
         self.db_manager = db_manager
+        self.error_handler = error_handler
+        self.form_data = form_data
         self.form_type = form_type
-        self.errors = errors
+        self.msgViewer = MsgViewer(form_data.msg_label)
         self._setup_form()
     
     def _setup_form(self):
@@ -27,7 +28,7 @@ class FormManager:
         """Обработчик сохранения данных"""
         # Сначала проверяем валидность данных
         error_msg = self.input_form.save_data()
-        self.errors.show_message(error_msg)
+        self.msgViewer.show_message(error_msg)
         if not error_msg[0]:
             return
         # Получаем объект из формы
@@ -49,7 +50,7 @@ class FormManager:
         """Обработчик удаления данных"""
         obj_id = self.form_data.entry_field.get()
         if not obj_id:
-            self.errors.show_message(tuple([False, "Ошибка: Введите ID для удаления"]))
+            self.msgViewer.show_message(tuple([False, "Ошибка: Введите ID для удаления"]))
             return
         
         try:
@@ -67,14 +68,14 @@ class FormManager:
                 success = self.db_manager.delete_relief(obj_id)
                 
             if success:
-                self.errors.show_message(tuple([True, "Запись успешно удалена"]))
+                self.msgViewer.show_message(tuple([True, "Запись успешно удалена"]))
                 self.form_data.entry_field.delete(0, tk.END)
             else:
-                self.errors.show_message(tuple([False, "Не удалось удалить запись"]))
+                self.msgViewer.show_message(tuple([False, "Не удалось удалить запись"]))
         except ValueError:
-            self.errors.show_message(tuple([False, "ID должен быть числом"]))
+            self.msgViewer.show_message(tuple([False, "ID должен быть числом"]))
         except Exception as e:
-            self.errors.show_message(tuple([False, f"Ошибка при удалении: {str(e)}"]))
+            self.msgViewer.show_message(tuple([False, f"Ошибка при удалении: {str(e)}"]))
     
     def _on_show(self):
         """Обработчик отображения данных"""
@@ -94,12 +95,12 @@ class FormManager:
             
             self._show_data_in_window(data)
         except Exception as e:
-            self.errors.show_message(tuple([False, f"Ошибка при получении данных: {str(e)}"]))
+            self.msgViewer.show_message(tuple([False, f"Ошибка при получении данных: {str(e)}"]))
     
     def _show_data_in_window(self, data: list):
-        """Отображает данные в новом окне в виде таблицы"""
+        """Отображает данные в новом окне в виде таблицы с поддержкой вложенных структур"""
         if not data:
-            self.errors.show_message(tuple([False, "Нет данных для отображения"]))
+            self.msgViewer.show_message(tuple([False, "Нет данных для отображения"]))
             return
             
         window = tk.Toplevel()
@@ -124,10 +125,56 @@ class FormManager:
             tree.heading(col, text=col)
             tree.column(col, width=120, anchor=tk.CENTER)
         
-        # Добавляем данные
-        for item in data:
-            values = [getattr(item, col) for col in columns]
-            tree.insert("", tk.END, values=values)
+        # Добавляем данные и сохраняем соответствие между ID строки и индексом данных
+        item_id_to_index = {}
+        for index, item in enumerate(data):
+            values = []
+            for col in columns:
+                value = getattr(item, col)
+                if isinstance(value, (list, dict)) and value:  # Если значение - непустой список/словарь
+                    # Для сложных структур указываем специальный текст
+                    values.append("Показать массив")
+                else:
+                    values.append(str(value))
+            
+            item_id = tree.insert("", tk.END, values=values)
+            item_id_to_index[item_id] = index
+            
+            # Сохраняем сложные данные в теге строки
+            complex_data = {col: getattr(item, col) for col in columns 
+                        if isinstance(getattr(item, col), (list, dict)) and getattr(item, col)}
+            if complex_data:
+                tree.item(item_id, tags=("has_complex",))
+        
+        # Обработчик двойного клика по строке
+        def on_item_double_click(event):
+            item_id = tree.focus()
+            if not item_id:
+                return
+                
+            tags = tree.item(item_id, "tags")
+            if "has_complex" not in tags:
+                return
+                
+            # Определяем колонку, по которой кликнули
+            col = tree.identify_column(event.x)
+            col_index = int(col[1:]) - 1
+            if col_index >= len(columns):
+                return
+                
+            col_name = columns[col_index]
+            
+            # Получаем исходный объект по сохраненному соответствию
+            if item_id not in item_id_to_index:
+                return
+                
+            item_data = data[item_id_to_index[item_id]]
+            value = getattr(item_data, col_name)
+            
+            if isinstance(value, (list, dict)) and value:
+                self._show_complex_data(value, col_name)
+        
+        tree.bind("<Double-1>", on_item_double_click)
         
         # Размещаем элементы
         tree.grid(row=0, column=0, sticky="nsew")
@@ -137,6 +184,148 @@ class FormManager:
         # Настраиваем растягивание
         frame.grid_rowconfigure(0, weight=1)
         frame.grid_columnconfigure(0, weight=1)
+
+    def _show_complex_data(self, data, title):
+        """Отображает сложные данные в новом окне"""
+        window = tk.Toplevel()
+        window.title(f"Детали: {title}")
+        
+        frame = ttk.Frame(window)
+        frame.pack(fill=tk.BOTH, expand=True)
+        
+        tree = ttk.Treeview(frame)
+        scroll_x = ttk.Scrollbar(frame, orient=tk.HORIZONTAL, command=tree.xview)
+        scroll_y = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=tree.yview)
+        tree.configure(xscrollcommand=scroll_x.set, yscrollcommand=scroll_y.set)
+        
+        if isinstance(data, list) and data:
+            # Для двумерного списка (list of lists)
+            if len(data) == 2:
+                data = list(zip(data[0], data[1]))
+            if all(isinstance(row, list) and len(row) >= 2 for row in data):
+                columns = ["Column 1", "Column 2"]
+                tree["columns"] = columns
+                tree.column("#0", width=0, stretch=tk.NO)
+                
+                for col in columns:
+                    tree.heading(col, text=col)
+                    tree.column(col, width=120, anchor=tk.CENTER)
+                
+                # Добавляем данные (первые два элемента каждой строки)
+                for row in data:
+                    values = [str(row[0]), str(row[1])] if len(row) >= 2 else [str(row[0]), ""]
+                    tree.insert("", tk.END, values=values)
+            
+            # Остальные случаи (для совместимости)
+            elif hasattr(data[0], '__dict__'):
+                columns = list(vars(data[0]).keys())
+                tree["columns"] = columns
+                tree.column("#0", width=0, stretch=tk.NO)
+                for col in columns:
+                    tree.heading(col, text=col)
+                    tree.column(col, width=120, anchor=tk.CENTER)
+                
+                for item in data:
+                    values = [str(getattr(item, col)) for col in columns]
+                    tree.insert("", tk.END, values=values)
+                    
+            elif isinstance(data[0], dict):
+                columns = list(data[0].keys())
+                tree["columns"] = columns
+                tree.column("#0", width=0, stretch=tk.NO)
+                for col in columns:
+                    tree.heading(col, text=col)
+                    tree.column(col, width=120, anchor=tk.CENTER)
+                
+                for item in data:
+                    values = [str(item.get(col, "")) for col in columns]
+                    tree.insert("", tk.END, values=values)
+                    
+            else:
+                columns = ["Value"]
+                tree["columns"] = columns
+                tree.column("#0", width=0, stretch=tk.NO)
+                tree.heading(columns[0], text=columns[0])
+                tree.column(columns[0], width=120, anchor=tk.CENTER)
+                
+                for item in data:
+                    tree.insert("", tk.END, values=[str(item)])
+        
+        else:
+            self.error_handler.handle(Exception("Для отображения данных ожидался двумерный List"), 
+                                      "Нет данных для отображения или данные представлены не верно", 
+                                      True)
+            return
+        
+        tree.grid(row=0, column=0, sticky="nsew")
+        scroll_y.grid(row=0, column=1, sticky="ns")
+        scroll_x.grid(row=1, column=0, sticky="ew")
+        
+        frame.grid_rowconfigure(0, weight=1)
+        frame.grid_columnconfigure(0, weight=1)
+    
+    
+
+class MsgViewer:
+    def __init__(self, label_widget: ttk.Label):
+        """
+        Инициализация обработчика сообщений с указанным виджетом Label.
+        
+        :param label_widget: виджет ttk.Label, в который будут выводиться сообщения
+        """
+        self.label = label_widget
+        self._clear_id = None  # ID отложенного вызова очистки
+        self._create_styles()
+        
+    def _create_styles(self):
+        """Создает необходимые стили для виджета Label."""
+        style = ttk.Style()
+        
+        # Стиль для успешных сообщений
+        style.configure("ErrorHandler.Success.TLabel", 
+                      background="green", 
+                      foreground="white",
+                      padding=5)
+        
+        # Стиль для ошибок
+        style.configure("ErrorHandler.Error.TLabel", 
+                      background="red", 
+                      foreground="white",
+                      padding=5)
+        
+        # Стиль по умолчанию
+        style.configure("ErrorHandler.Default.TLabel",
+                      padding=5)
+    
+    def show_message(self, result: Tuple[bool, str]) -> None:
+        """
+        Отображает сообщение с цветным фоном на основе результата операции.
+        Автоматически очищает через 5 секунд.
+        
+        :param result: Кортеж (статус_успеха, сообщение)
+                      где статус_успеха - bool (True = успех, False = ошибка)
+        """
+        # Отменяем предыдущую запланированную очистку
+        if self._clear_id is not None:
+            self.label.after_cancel(self._clear_id)
+        
+        is_success, message = result
+        self.clear()
+        
+        # Устанавливаем текст и стиль
+        self.label.config(text=message)
+        if is_success:
+            self.label.config(style="ErrorHandler.Success.TLabel")
+        else:
+            self.label.config(style="ErrorHandler.Error.TLabel")
+        
+        # Запланировать очистку через 3 секунд (5000 мс)
+        self._clear_id = self.label.after(3000, self.clear)
+    
+    def clear(self):
+        """Очищает Label и возвращает стандартный стиль."""
+        self.label.config(text="", style="ErrorHandler.Default.TLabel")
+        self._clear_id = None  # Сбрасываем ID таймера
 
 class InputForm:
     def __init__(self, root, form_type="Plane"):

@@ -25,7 +25,7 @@ if __name__ == "__main__":
     for i, type in enumerate(BASE_CLASSES_MAP.keys()):
         FormManager(db, window.forms_data[i], type, cache, error_handler)
 
-    count = Count(db)
+    count = Count(db, cache)
 
     # Создаем объект для обновления данных
     data_updater = DataUpdater(

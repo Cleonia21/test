@@ -5,6 +5,7 @@ from entities import *
 from dataclasses import dataclass
 from collections import defaultdict
 import bisect
+from db_cache import DBCache
 
 # Создаем экземпляр DatabaseManager
 db = DatabaseManager()
@@ -96,17 +97,37 @@ def degrees_to_radians(degrees):
     return degrees * (math.pi / 180)
 
 class Count():
-    def __init__(self, db: DatabaseManager):
+    def __init__(self, db: DatabaseManager, cache: DBCache):
         self.db = db
         self.data: CurrentDataSet = []
+        self.cache = cache
         self._dataCollection()
 
     def _dataCollection(self):
-        planes = self.db.get_all_planes()
-        rockets = self.db.get_all_rockets()
-        purposes = self.db.get_all_purposes()
-        air_defences = self.db.get_all_air_defenses()
-        reliefs = self.db.get_all_reliefs()
+        if self.cache.count(Plane):
+            planes = self.cache.get_ids(Plane)
+        else:
+            planes = self.db.get_all_planes()
+
+        if self.cache.count(Rocket):
+            rockets = self.cache.get_ids(Rocket)
+        else:
+            rockets = self.db.get_all_rockets()
+
+        if self.cache.count(Purpose):
+            purposes = self.cache.get_ids(Purpose)
+        else:
+            purposes = self.db.get_all_purposes()
+
+        if self.cache.count(AirDefense):
+            air_defences = self.cache.get_ids(AirDefense)
+        else:
+            air_defences = self.db.get_all_air_defenses()
+
+        if self.cache.count(Relief):
+            reliefs = self.cache.get_ids(Relief)
+        else:
+            reliefs = self.db.get_all_reliefs()
 
         if planes == None or rockets == None or purposes == None or air_defences == None or reliefs == None:
             raise Exception("Один из объектов из базы данных пустой")

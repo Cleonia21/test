@@ -5,6 +5,7 @@ from window_builder import FormData
 from entities import *
 from typing import Tuple
 from error_handler import ErrorHandler
+from typing import List, Dict, Any, Union
 
 class FormManager:
     def __init__(self, db_manager: DatabaseManager, form_data: FormData, form_type: str, error_handler: ErrorHandler):
@@ -13,6 +14,7 @@ class FormManager:
         self.form_data = form_data
         self.form_type = form_type
         self.msgViewer = MsgViewer(form_data.msg_label)
+        self.data_viewer = DataViewer(error_handler)  # Добавляем DataViewer
         self._setup_form()
     
     def _setup_form(self):
@@ -26,15 +28,12 @@ class FormManager:
     
     def _on_save(self):
         """Обработчик сохранения данных"""
-        # Сначала проверяем валидность данных
         error_msg = self.input_form.save_data()
         self.msgViewer.show_message(error_msg)
         if not error_msg[0]:
             return
-        # Получаем объект из формы
         obj = self.input_form.get_object()
         if obj:
-            # Сохраняем в БД в зависимости от типа
             if self.form_type == "Plane":
                 self.db_manager.save_plane(obj)
             elif self.form_type == "Rocket":
@@ -93,178 +92,168 @@ class FormManager:
             else:
                 data = []
             
-            self._show_data_in_window(data)
+            self.data_viewer.show_data(data, self.form_type)  # Используем DataViewer
         except Exception as e:
             self.msgViewer.show_message(tuple([False, f"Ошибка при получении данных: {str(e)}"]))
+
+class DataViewer:
+    def __init__(self, error_handler: 'ErrorHandler'):
+        self.error_handler = error_handler
     
-    def _show_data_in_window(self, data: list):
+    def show_data(self, data: List[Any], title: str) -> None:
         """Отображает данные в новом окне в виде таблицы с поддержкой вложенных структур"""
         if not data:
-            self.msgViewer.show_message(tuple([False, "Нет данных для отображения"]))
+            self.error_handler.handle(Exception("No data"), "Нет данных для отображения", False)
             return
             
+        window = self._create_base_window(title)
+        frame = self._create_scrollable_frame(window)
+        tree, scroll_x, scroll_y = self._create_treeview_with_scrollbars(frame)
+        columns = self._get_object_columns(data[0])
+        
+        self._setup_treeview_columns(tree, columns)
+        item_id_to_index = self._populate_treeview_data(tree, data, columns)
+        self._setup_double_click_handler(tree, item_id_to_index, data, columns)
+        self._arrange_widgets_in_grid(tree, scroll_x, scroll_y, frame)
+
+    def show_complex_data(self, data: Union[List, Dict], title: str) -> None:
+        """Отображает сложные данные (списки/словари) в новом окне"""
+        window = self._create_base_window(f"Детали: {title}")
+        frame = self._create_scrollable_frame(window)
+        tree, scroll_x, scroll_y = self._create_treeview_with_scrollbars(frame)
+        
+        if isinstance(data, list) and data:
+            self._setup_and_populate_list_data(tree, data)
+        else:
+            self.error_handler.handle(
+                Exception("Для отображения данных ожидался двумерный List"),
+                "Нет данных для отображения или данные представлены не верно", 
+                True
+            )
+            return
+        
+        self._arrange_widgets_in_grid(tree, scroll_x, scroll_y, frame)
+
+    def _create_base_window(self, title: str) -> tk.Toplevel:
+        """Создает и возвращает новое окно с заданным заголовком"""
         window = tk.Toplevel()
-        window.title(f"Данные: {self.form_type}")
-        
-        # Создаем Treeview с горизонтальной прокруткой
-        frame = ttk.Frame(window)
+        window.title(title)
+        return window
+
+    def _create_scrollable_frame(self, parent: tk.Widget) -> ttk.Frame:
+        """Создает и возвращает frame с возможностью растягивания"""
+        frame = ttk.Frame(parent)
         frame.pack(fill=tk.BOTH, expand=True)
-        
-        tree = ttk.Treeview(frame)
-        scroll_x = ttk.Scrollbar(frame, orient=tk.HORIZONTAL, command=tree.xview)
-        scroll_y = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=tree.yview)
+        return frame
+
+    def _create_treeview_with_scrollbars(self, parent: ttk.Frame) -> tuple:
+        """Создает и возвращает Treeview с горизонтальной и вертикальной прокруткой"""
+        tree = ttk.Treeview(parent)
+        scroll_x = ttk.Scrollbar(parent, orient=tk.HORIZONTAL, command=tree.xview)
+        scroll_y = ttk.Scrollbar(parent, orient=tk.VERTICAL, command=tree.yview)
         tree.configure(xscrollcommand=scroll_x.set, yscrollcommand=scroll_y.set)
-        
-        # Получаем названия колонок
-        columns = list(vars(data[0]).keys())
+        return tree, scroll_x, scroll_y
+
+    def _get_object_columns(self, data_item: object) -> List[str]:
+        """Возвращает список атрибутов объекта для использования в качестве колонок"""
+        return list(vars(data_item).keys())
+
+    def _setup_treeview_columns(self, tree: ttk.Treeview, columns: List[str]) -> None:
+        """Настраивает колонки Treeview"""
         tree["columns"] = columns
-        
-        # Настраиваем заголовки
         tree.column("#0", width=0, stretch=tk.NO)
+        
         for col in columns:
             tree.heading(col, text=col)
             tree.column(col, width=120, anchor=tk.CENTER)
-        
-        # Добавляем данные и сохраняем соответствие между ID строки и индексом данных
+
+    def _populate_treeview_data(self, tree: ttk.Treeview, data: List[Any], columns: List[str]) -> Dict[str, int]:
+        """Заполняет Treeview данными и возвращает соответствие ID строки индексу данных"""
         item_id_to_index = {}
+        
         for index, item in enumerate(data):
-            values = []
-            for col in columns:
-                value = getattr(item, col)
-                if isinstance(value, (list, dict)) and value:  # Если значение - непустой список/словарь
-                    # Для сложных структур указываем специальный текст
-                    values.append("Показать массив")
-                else:
-                    values.append(str(value))
-            
+            values = self._prepare_row_values(item, columns)
             item_id = tree.insert("", tk.END, values=values)
             item_id_to_index[item_id] = index
             
-            # Сохраняем сложные данные в теге строки
-            complex_data = {col: getattr(item, col) for col in columns 
-                        if isinstance(getattr(item, col), (list, dict)) and getattr(item, col)}
-            if complex_data:
+            if self._has_complex_data(item, columns):
                 tree.item(item_id, tags=("has_complex",))
         
-        # Обработчик двойного клика по строке
+        return item_id_to_index
+
+    def _prepare_row_values(self, item: Any, columns: List[str]) -> List[str]:
+        """Подготавливает значения строки для отображения в Treeview"""
+        values = []
+        for col in columns:
+            value = getattr(item, col)
+            if isinstance(value, (list, dict)) and value:
+                values.append("Показать массив")
+            else:
+                values.append(str(value))
+        return values
+
+    def _has_complex_data(self, item: Any, columns: List[str]) -> bool:
+        """Проверяет, есть ли в объекте сложные данные (списки/словари)"""
+        return any(
+            isinstance(getattr(item, col), (list, dict)) and getattr(item, col)
+            for col in columns
+        )
+
+    def _setup_double_click_handler(self, tree: ttk.Treeview, item_id_to_index: Dict[str, int], 
+                                  data: List[Any], columns: List[str]) -> None:
+        """Настраивает обработчик двойного клика для отображения вложенных данных"""
         def on_item_double_click(event):
             item_id = tree.focus()
-            if not item_id:
+            if not item_id or "has_complex" not in tree.item(item_id, "tags"):
                 return
                 
-            tags = tree.item(item_id, "tags")
-            if "has_complex" not in tags:
-                return
-                
-            # Определяем колонку, по которой кликнули
-            col = tree.identify_column(event.x)
-            col_index = int(col[1:]) - 1
-            if col_index >= len(columns):
-                return
-                
-            col_name = columns[col_index]
-            
-            # Получаем исходный объект по сохраненному соответствию
-            if item_id not in item_id_to_index:
+            col_name = self._get_clicked_column_name(tree, event, columns)
+            if not col_name or item_id not in item_id_to_index:
                 return
                 
             item_data = data[item_id_to_index[item_id]]
             value = getattr(item_data, col_name)
             
             if isinstance(value, (list, dict)) and value:
-                self._show_complex_data(value, col_name)
+                self.show_complex_data(value, col_name)
         
         tree.bind("<Double-1>", on_item_double_click)
-        
-        # Размещаем элементы
+
+    def _get_clicked_column_name(self, tree: ttk.Treeview, event: tk.Event, columns: List[str]) -> Union[str, None]:
+        """Возвращает название колонки, по которой был сделан клик"""
+        col = tree.identify_column(event.x)
+        col_index = int(col[1:]) - 1
+        return columns[col_index] if col_index < len(columns) else None
+
+    def _arrange_widgets_in_grid(self, tree: ttk.Treeview, scroll_x: ttk.Scrollbar, 
+                               scroll_y: ttk.Scrollbar, frame: ttk.Frame) -> None:
+        """Размещает виджеты в grid и настраивает растягивание"""
         tree.grid(row=0, column=0, sticky="nsew")
         scroll_y.grid(row=0, column=1, sticky="ns")
         scroll_x.grid(row=1, column=0, sticky="ew")
         
-        # Настраиваем растягивание
         frame.grid_rowconfigure(0, weight=1)
         frame.grid_columnconfigure(0, weight=1)
 
-    def _show_complex_data(self, data, title):
-        """Отображает сложные данные в новом окне"""
-        window = tk.Toplevel()
-        window.title(f"Детали: {title}")
-        
-        frame = ttk.Frame(window)
-        frame.pack(fill=tk.BOTH, expand=True)
-        
-        tree = ttk.Treeview(frame)
-        scroll_x = ttk.Scrollbar(frame, orient=tk.HORIZONTAL, command=tree.xview)
-        scroll_y = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=tree.yview)
-        tree.configure(xscrollcommand=scroll_x.set, yscrollcommand=scroll_y.set)
-        
-        if isinstance(data, list) and data:
-            # Для двумерного списка (list of lists)
-            if len(data) == 2:
-                data = list(zip(data[0], data[1]))
-            if all(isinstance(row, list) and len(row) >= 2 for row in data):
-                columns = ["Column 1", "Column 2"]
-                tree["columns"] = columns
-                tree.column("#0", width=0, stretch=tk.NO)
-                
-                for col in columns:
-                    tree.heading(col, text=col)
-                    tree.column(col, width=120, anchor=tk.CENTER)
-                
-                # Добавляем данные (первые два элемента каждой строки)
-                for row in data:
-                    values = [str(row[0]), str(row[1])] if len(row) >= 2 else [str(row[0]), ""]
-                    tree.insert("", tk.END, values=values)
+    def _setup_and_populate_list_data(self, tree: ttk.Treeview, data: List) -> None:
+        """Настраивает и заполняет Treeview для отображения списка данных"""
+        if self._is_two_dimensional_list(data):
+            columns = ["Column 1", "Column 2"]
+            self._setup_treeview_columns(tree, columns)
             
-            # Остальные случаи (для совместимости)
-            elif hasattr(data[0], '__dict__'):
-                columns = list(vars(data[0]).keys())
-                tree["columns"] = columns
-                tree.column("#0", width=0, stretch=tk.NO)
-                for col in columns:
-                    tree.heading(col, text=col)
-                    tree.column(col, width=120, anchor=tk.CENTER)
-                
-                for item in data:
-                    values = [str(getattr(item, col)) for col in columns]
-                    tree.insert("", tk.END, values=values)
-                    
-            elif isinstance(data[0], dict):
-                columns = list(data[0].keys())
-                tree["columns"] = columns
-                tree.column("#0", width=0, stretch=tk.NO)
-                for col in columns:
-                    tree.heading(col, text=col)
-                    tree.column(col, width=120, anchor=tk.CENTER)
-                
-                for item in data:
-                    values = [str(item.get(col, "")) for col in columns]
-                    tree.insert("", tk.END, values=values)
-                    
-            else:
-                columns = ["Value"]
-                tree["columns"] = columns
-                tree.column("#0", width=0, stretch=tk.NO)
-                tree.heading(columns[0], text=columns[0])
-                tree.column(columns[0], width=120, anchor=tk.CENTER)
-                
-                for item in data:
-                    tree.insert("", tk.END, values=[str(item)])
-        
+            for row in data:
+                values = [str(row[0]), str(row[1])] if len(row) >= 2 else [str(row[0]), ""]
+                tree.insert("", tk.END, values=values)
         else:
-            self.error_handler.handle(Exception("Для отображения данных ожидался двумерный List"), 
-                                      "Нет данных для отображения или данные представлены не верно", 
-                                      True)
-            return
-        
-        tree.grid(row=0, column=0, sticky="nsew")
-        scroll_y.grid(row=0, column=1, sticky="ns")
-        scroll_x.grid(row=1, column=0, sticky="ew")
-        
-        frame.grid_rowconfigure(0, weight=1)
-        frame.grid_columnconfigure(0, weight=1)
-    
-    
+            columns = ["Value"]
+            self._setup_treeview_columns(tree, columns)
+            
+            for item in data:
+                tree.insert("", tk.END, values=[str(item)])
+
+    def _is_two_dimensional_list(self, data: List) -> bool:
+        """Проверяет, является ли список двумерным"""
+        return all(isinstance(row, list) and len(row) >= 2 for row in data)
 
 class MsgViewer:
     def __init__(self, label_widget: ttk.Label):
@@ -394,8 +383,8 @@ class InputForm:
                 ("Время пассивное", "t_passive", "float"),
                 ("Время смены цели", "t_changing", "float"),
                 ("Время оценки", "t_def", "float"),
-                ("X координата (матрица)", "x_defense", "matrix"),
-                ("Z координата (матрица)", "y_defense", "matrix"),
+                ("X координата (массив)", "x_defense", "matrix"),
+                ("Z координата (массив)", "y_defense", "matrix"),
                 ("L мин", "l_min", "float"),
                 ("L макс", "l_max", "float"),
                 ("Угол действия", "angle_effect", "float"),

@@ -21,13 +21,12 @@ class DatabaseManager:
             sigma_z REAL,
             psi_max REAL,
             t_aim REAL,
-            v REAL,
             gap_max REAL,
             visibility REAL,
             P_detect TEXT
         )
         """)
-        
+
         # Таблица для ракет
         self.cursor.execute("""
         CREATE TABLE IF NOT EXISTS rockets (

@@ -43,6 +43,7 @@ class DataUpdater:
         self.update_button.config(state=tk.DISABLED)
         self._show_status("Обновление данных...")
         self.progress.start()
+        self.count.dataCollection()
         
         # Запускаем обновление в отдельном потоке
         threading.Thread(target=self._update_data, daemon=True).start()
@@ -63,38 +64,38 @@ class DataUpdater:
         if not isinstance(graph_data, dict):
             raise TypeError(f"{graph_name}: Ожидался словарь данных, получен {type(graph_data)}")
         
-        for plane_name, data_points in graph_data.items():
-            if not isinstance(plane_name, str):
-                raise TypeError(f"{graph_name}: Ключи должны быть строками (названиями плоскостей)")
+        # for plane_name, data_points in graph_data.items():
+        #     if not isinstance(plane_name, str):
+        #         raise TypeError(f"{graph_name}: Ключи должны быть строками (названиями плоскостей)")
             
-            if not isinstance(data_points, tuple) or len(data_points) != 2:
-                raise ValueError(f"{graph_name}: Данные должны быть кортежем из двух элементов (x, y)")
+        #     if not isinstance(data_points, tuple) or len(data_points) != 2:
+        #         raise ValueError(f"{graph_name}: Данные должны быть кортежем из двух элементов (x, y)")
             
-            x_data, y_data = data_points
+        #     x_data, y_data = data_points
             
-            if not isinstance(x_data, (list, tuple)) or not isinstance(y_data, (list, tuple)):
-                raise TypeError(f"{graph_name}: Данные x и y должны быть списками или кортежами")
+        #     if not isinstance(x_data, (list, tuple)) or not isinstance(y_data, (list, tuple)):
+        #         raise TypeError(f"{graph_name}: Данные x и y должны быть списками или кортежами")
             
-            if len(x_data) != len(y_data):
-                raise ValueError(f"{graph_name}: Данные x и y должны иметь одинаковую длину")
+        #     if len(x_data) != len(y_data):
+        #         raise ValueError(f"{graph_name}: Данные x и y должны иметь одинаковую длину")
             
-            if len(x_data) == 0:
-                raise ValueError(f"{graph_name}: Нет данных для плоскости {plane_name}")
+        #     if len(x_data) == 0:
+        #         raise ValueError(f"{graph_name}: Нет данных для плоскости {plane_name}")
 
     def _validate_bar_graph_data(self, graph_data, graph_name):
         """Проверяет данные для столбчатого графика"""
         if not isinstance(graph_data, dict):
             raise TypeError(f"{graph_name}: Ожидался словарь данных, получен {type(graph_data)}")
         
-        if len(graph_data) == 0:
-            raise ValueError(f"{graph_name}: Нет данных для отображения")
+        # if len(graph_data) == 0:
+        #     raise ValueError(f"{graph_name}: Нет данных для отображения")
         
-        for category, value in graph_data.items():
-            if not isinstance(category, str):
-                raise TypeError(f"{graph_name}: Ключи должны быть строками (категориями)")
+        # for category, value in graph_data.items():
+        #     if not isinstance(category, str):
+        #         raise TypeError(f"{graph_name}: Ключи должны быть строками (категориями)")
             
-            if not isinstance(value, (int, float)):
-                raise TypeError(f"{graph_name}: Значения должны быть числами, получен {type(value)} для категории {category}")
+        #     if not isinstance(value, (int, float)):
+        #         raise TypeError(f"{graph_name}: Значения должны быть числами, получен {type(value)} для категории {category}")
 
     def _update_data(self):
         """Основная функция обновления данных"""
@@ -164,9 +165,10 @@ class DataUpdater:
             self.loading_label.config(text="Готово!", foreground="green")
         else:
             self.loading_label.config(text=f"Ошибка: {error_msg}", foreground="red")
+            print(f"Ошибка: {error_msg}")
         
         self.update_button.config(state=tk.NORMAL)
         
         # Прячем статус через 3 секунды (если ошибка) или 2 секунды (если успех)
-        delay = 3000 if not success else 2000
+        delay = 10000 if not success else 2000
         self.window.root.after(delay, self._hide_status_elements)

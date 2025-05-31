@@ -5,8 +5,9 @@ from window_builder import FormData
 from entities import *
 from typing import Tuple
 from error_handler import ErrorHandler
-from typing import List, Dict, Any, Union, Type
+from typing import List, Dict, Any, Union
 from db_cache import DBCache
+import numpy as np
 
 class FormManager:
     def __init__(self, db_manager: DatabaseManager, form_data: FormData, form_type: BASE_CLASSES_TYPE, db_cache: DBCache, error_handler: ErrorHandler):
@@ -90,10 +91,11 @@ class FormManager:
                 data = self.db_manager.get_all_air_defenses()
             elif self.form_type == Relief:
                 data = self.db_manager.get_all_reliefs()
-            else:
-                data = []
+
+            if not data:
+                raise(Exception("Нет данных для отображения"))
             
-            self.data_viewer.show_data(data, BASE_CLASSES_MAP[self.form_type], self.form_type)  # Используем DataViewer
+            self.data_viewer.show_data(data, BASE_CLASSES_MAP[self.form_type], self.form_type)
         except Exception as e:
             self.msgViewer.show_message(tuple([False, f"Ошибка при получении данных: {str(e)}"]))
 
@@ -108,9 +110,6 @@ class DataViewer:
     
     def show_data(self, data: List[Any], title: str, data_type: BASE_CLASSES_TYPE) -> None:
         """Отображает данные в новом окне с поддержкой выбора и кэширования строк"""
-        if not data:
-            self.error_handler.handle(Exception("No data"), "Нет данных для отображения", False)
-            return
         
         self.current_data_type = data_type
         self.selected_items.clear()
@@ -182,12 +181,29 @@ class DataViewer:
             self.msgViewer.show_message(tuple([False, "Не выбрано ни одной строки"]))
             return
         
-        # Получаем ID выбранных элементов (предполагаем, что первый столбец содержит ID)
+        # Получаем названия столбцов
+        columns = tree['columns']
+        
+        # Ищем индекс столбца с названием 'ID' (регистронезависимо)
+        id_column_index = None
+        for i, col in enumerate(columns):
+            if col.lower() == 'id':
+                id_column_index = i
+                break
+        
+        if id_column_index is None:
+            self.msgViewer.show_message(tuple([False, "Не найден столбец с ID"]))
+            return
+        
+        # Получаем ID выбранных элементов из найденного столбца
         selected_ids = []
         for item in tree.selection():
             values = tree.item(item)['values']
-            if values:
-                selected_ids.append(int(values[0]))
+            if values and len(values) > id_column_index:
+                try:
+                    selected_ids.append(int(values[id_column_index]))
+                except (ValueError, TypeError):
+                    continue
         
         if selected_ids:
             self.db_cache.add_ids(data_type, selected_ids)

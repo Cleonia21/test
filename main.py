@@ -44,6 +44,21 @@ if __name__ == "__main__":
     graph = LinearGraph()
     graph.build(x_label="v", y_label="k")
     graph.display(window.chart_area_3)
+    
+    graph = LinearGraph()
+    graph.build(x_label="v", y_label="k")
+    graph.display(window.chart_area_4)
+
+    # Создаем случайные данные
+    np.random.seed(42)
+    x = np.random.rand(50) * 10
+    y = np.random.rand(50) * 10
+    sizes = np.random.rand(50) * 100
+
+    graph = ScatterGraph()
+    graph.add_data_set(x, y)
+    graph.build(x_label="v", y_label="k")
+    graph.display(window.chart_area_5)
 
     root.mainloop()
 

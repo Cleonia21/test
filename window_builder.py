@@ -11,6 +11,7 @@ class FormData:
     entry_field: ttk.Entry
     save_button: ttk.Button
     delete_button: ttk.Button
+    msg_label: ttk.Label
 
 class WindowBuilder:
     def __init__(self, root):
@@ -23,7 +24,6 @@ class WindowBuilder:
         self.input_window = None  # Ссылка на окно с формами ввода
         
         # Публичные переменные для основных областей
-        self.error_label = None       # Верхнее поле ввода
         self.update_button = None     # Кнопка обновления (заменяет update_area)
         self.edit_data_button = None  # Кнопка для открытия окна с формами
         self.chart_area_1 = None    # Область для графика 1
@@ -49,10 +49,6 @@ class WindowBuilder:
         # Верхняя панель с сообщениями и кнопками
         top_panel = ttk.Frame(main_frame)
         top_panel.pack(fill=tk.X, padx=5, pady=5)
-        
-        # Сообщение об ошибках (слева)
-        self.error_label = ttk.Label(top_panel)
-        self.error_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
         # Кнопка обновления (справа)
         self.update_button = ttk.Button(
@@ -118,6 +114,11 @@ class WindowBuilder:
         form.pack(fill=tk.X, pady=5, ipadx=5, ipady=5)
         
         # Создаем элементы формы
+
+        # Сообщение об ошибках (слева)
+        msg_label = ttk.Label(form)
+        msg_label.pack(fill=tk.X, pady=5)
+
         lbl_title = ttk.Label(form, font=('Arial', 10, 'bold'))
         lbl_title.pack(anchor='center', pady=(0, 5))  # Изменено на center
         
@@ -144,6 +145,7 @@ class WindowBuilder:
         # Создаем и сохраняем объект с данными формы
         form_data = FormData(
             form=form,
+            msg_label=msg_label,
             title=lbl_title,
             show_button=btn_show,
             entry_field=entry,

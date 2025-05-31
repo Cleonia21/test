@@ -7,7 +7,6 @@ class Plane:
         self.sigma_z: float = 0.0
         self.psi_max: float = 0.0
         self.t_aim: float = 0.0
-        self.v: float = 0.0
         self.gap_max: float = 0.0
         self.visibility: float = 0.0
         self.P_detect: list = [[]]  # 2D массив вероятностей обнаружения

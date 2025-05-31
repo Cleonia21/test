@@ -450,6 +450,98 @@ class DatabaseManager:
         self.cursor.execute("DELETE FROM reliefs WHERE id=?", (relief_id,))
         self.conn.commit()
         return self.cursor.rowcount > 0
+    
+    # Методы для получения наборов объектов по массиву ID
+
+    # Для самолетов
+    def get_planes_by_ids(self, plane_ids: List[int]) -> List[Plane]:
+        """Получает несколько Plane по списку ID"""
+        if not plane_ids:
+            return []
+            
+        placeholders = ','.join(['?'] * len(plane_ids))
+        self.cursor.execute(f"SELECT * FROM planes WHERE id IN ({placeholders})", plane_ids)
+        rows = self.cursor.fetchall()
+        
+        result = []
+        for row in rows:
+            columns = [column[0] for column in self.cursor.description]
+            plane_data = dict(zip(columns, row))
+            result.append(self._dict_to_object(plane_data, Plane))
+        
+        return result
+
+    # Для ракет
+    def get_rockets_by_ids(self, rocket_ids: List[int]) -> List[Rocket]:
+        """Получает несколько Rocket по списку ID"""
+        if not rocket_ids:
+            return []
+            
+        placeholders = ','.join(['?'] * len(rocket_ids))
+        self.cursor.execute(f"SELECT * FROM rockets WHERE id IN ({placeholders})", rocket_ids)
+        rows = self.cursor.fetchall()
+        
+        result = []
+        for row in rows:
+            columns = [column[0] for column in self.cursor.description]
+            rocket_data = dict(zip(columns, row))
+            result.append(self._dict_to_object(rocket_data, Rocket))
+        
+        return result
+
+    # Для целей
+    def get_purposes_by_ids(self, purpose_ids: List[int]) -> List[Purpose]:
+        """Получает несколько Purpose по списку ID"""
+        if not purpose_ids:
+            return []
+            
+        placeholders = ','.join(['?'] * len(purpose_ids))
+        self.cursor.execute(f"SELECT * FROM purposes WHERE id IN ({placeholders})", purpose_ids)
+        rows = self.cursor.fetchall()
+        
+        result = []
+        for row in rows:
+            columns = [column[0] for column in self.cursor.description]
+            purpose_data = dict(zip(columns, row))
+            result.append(self._dict_to_object(purpose_data, Purpose))
+        
+        return result
+
+    # Для систем ПВО
+    def get_air_defenses_by_ids(self, air_defense_ids: List[int]) -> List[AirDefense]:
+        """Получает несколько AirDefense по списку ID"""
+        if not air_defense_ids:
+            return []
+            
+        placeholders = ','.join(['?'] * len(air_defense_ids))
+        self.cursor.execute(f"SELECT * FROM air_defenses WHERE id IN ({placeholders})", air_defense_ids)
+        rows = self.cursor.fetchall()
+        
+        result = []
+        for row in rows:
+            columns = [column[0] for column in self.cursor.description]
+            air_defense_data = dict(zip(columns, row))
+            result.append(self._dict_to_object(air_defense_data, AirDefense))
+        
+        return result
+
+    # Для рельефа
+    def get_reliefs_by_ids(self, relief_ids: List[int]) -> List[Relief]:
+        """Получает несколько Relief по списку ID"""
+        if not relief_ids:
+            return []
+            
+        placeholders = ','.join(['?'] * len(relief_ids))
+        self.cursor.execute(f"SELECT * FROM reliefs WHERE id IN ({placeholders})", relief_ids)
+        rows = self.cursor.fetchall()
+        
+        result = []
+        for row in rows:
+            columns = [column[0] for column in self.cursor.description]
+            relief_data = dict(zip(columns, row))
+            result.append(self._dict_to_object(relief_data, Relief))
+        
+        return result
 
     def close(self):
         """Закрывает соединение с базой данных"""

@@ -3,25 +3,26 @@ from window_builder import WindowBuilder
 import tkinter as tk
 from data_base import DatabaseManager
 from form_manager import FormManager
-from error_handler import ErrorHandler
 from count import Count
 from data_updater import DataUpdater
-
-# test
+from error_handler import ErrorHandler
+from db_cache import DBCache
 
 # Пример использования
 if __name__ == "__main__":
     root = tk.Tk()
     root.geometry("1500x1000")
 
+    error_handler = ErrorHandler()
+    cache = DBCache()
+
     window = WindowBuilder(root)
     window.build()
 
     db = DatabaseManager()
-    errors = ErrorHandler(window.error_label)
 
     for i, type in enumerate(["Plane", "Rocket", "Purpose", "AirDefense", "Relief"]):
-        FormManager(window.forms_data[i], errors, db, type)
+        FormManager(db, window.forms_data[i], type, error_handler)
 
     count = Count(db)
 
@@ -54,7 +55,7 @@ if __name__ == "__main__":
 
     * DatabaseManager() - Подключается/создает базу данных, предоставляет функции для управления данными
 
-    * ErrorHandler() - Отображает уводомления/ошибки на графическом экране
+    * ErrorHandler() - Отображает уводомления/ошибки на графическом экране - Не верное описание
 
     * FormManager() - Создает и вставляет на экран "блоки" по работе с объектами(самолет, ракета и т.д.).
 Каждый блок содержит кнопки "удалить", "сохранить", "отобразить" и имеет поля для вписывания данных.

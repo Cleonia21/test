@@ -19,7 +19,7 @@ class DataUpdater:
         self.update_button.config(command=self._start_update_process)
         
         # Создаем элементы для отображения статуса обновления
-        self.status_frame = ttk.Frame(self.window.error_label.master)
+        self.status_frame = ttk.Frame(self.window.update_button.master)
         self.status_frame.pack(side=tk.RIGHT, padx=10)
         
         self.loading_label = ttk.Label(self.status_frame, text="")

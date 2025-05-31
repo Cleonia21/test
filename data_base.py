@@ -93,12 +93,14 @@ class DatabaseManager:
         """Конвертирует объект в словарь для сохранения в БД"""
         data = vars(obj).copy()
         
-        # Конвертируем numpy массивы в JSON
+        # Конвертируем numpy массивы и списки в JSON
         for key, value in data.items():
             if isinstance(value, np.ndarray):
                 data[key] = json.dumps(value.tolist())
+            elif isinstance(value, list):
+                data[key] = json.dumps(value)  # Преобразуем списки в JSON
             elif isinstance(value, bool):
-                data[key] = int(value)  # SQLite не имеет типа BOOLEAN, используем INTEGER
+                data[key] = int(value)
         
         return data
 

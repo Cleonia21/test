@@ -1,5 +1,6 @@
 from data_base import DatabaseManager
 from entities import *
+import numpy as np
 
 def main():
     # Создаем подключение к базе данных
@@ -16,7 +17,7 @@ def main():
                 "t_aim": 5.0,
                 "gap_max": 7,
                 "visibility": 3.0,
-                "P_detect": ([[0, 5000, 10000], [1.0, 0.5, 0]])
+                "P_detect": np.array([[0, 5000, 10000], [1.0, 0.5, 0]])
             },
             {
                 "name": "Cу - 25",
@@ -26,7 +27,7 @@ def main():
                 "t_aim": 8.5,
                 "gap_max": 6,
                 "visibility": 3.0,
-                "P_detect": ([[0, 4000, 8000], [1.0, 0.5, 0]])
+                "P_detect": np.array([[0, 4000, 8000], [1.0, 0.5, 0]])
             },
             {
                 "name": "МиГ - 29",
@@ -36,7 +37,7 @@ def main():
                 "t_aim": 7.0,
                 "gap_max": 9,
                 "visibility": 2.5,
-                "P_detect": ([[0, 1.0], [4000, 0.5], [8000, 0]])
+                "P_detect": np.array([[0, 1.0], [4000, 0.5], [8000, 0]])
             }
         ]
         
@@ -118,7 +119,7 @@ def main():
                 "width_defense": 5000.0,
                 "h_max": 5000.0,
                 "P_defeat": 0.6,
-                "P_detect": ([[0, 1.0], [20000, 0.5], [40000, 0.0]])
+                "P_detect": np.array([[0, 1.0], [20000, 0.5], [40000, 0.0]])
             },
         ]
         
@@ -134,7 +135,7 @@ def main():
         reliefs = [
             {
                 "name": "Равнина",
-                "P_see": ([[0.0, 1.0], [5000, 0.75], [10000, 0.42], [20000, 0.12], [30000, 0.0]])
+                "P_see": np.array([[0.0, 1.0], [5000, 0.75], [10000, 0.42], [20000, 0.12], [30000, 0.0]])
             },
 
         ]

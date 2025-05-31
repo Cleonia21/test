@@ -275,7 +275,6 @@ class Count():
         return result_data
 
     def _polygon(self, data: CurrentDataSet) -> float:
-        # Базовые параметры
         tet = math.atan2(data.h, degrees_to_radians(data.rocket.R_min))  # arctg(altitude/R_min)
         ctg_tet = 1 / math.tan(degrees_to_radians(tet)) if math.tan(degrees_to_radians(tet)) != 0 else float('inf')
         sig_x = 4

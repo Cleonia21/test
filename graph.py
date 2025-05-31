@@ -231,12 +231,12 @@ class BarGraph(BaseGraph):
         self.params = params if params is not None else {}
         self.legend_needed = False
     
-    def build(self, x_label="", y_label="", title="", grid=True):
+    def build(self, x_label="", y_label="", title="", grid=True, y_range=None, y_margin=0.1):
         self._setup_figure()
         
         default_params = {
             'color': 'blue',
-            'width': 0.8,
+            'width': 0.2,
             'alpha': 0.7,
             'edgecolor': 'white',
             'label': None,
@@ -247,16 +247,93 @@ class BarGraph(BaseGraph):
             self.legend_needed = True
         
         index = np.arange(len(self.x_labels))
-        self.ax.bar(index, self.y_data, 
+        bars = self.ax.bar(index, self.y_data, 
                    width=params['width'],
                    color=params['color'],
                    alpha=params['alpha'],
                    label=params['label'],
                    edgecolor=params['edgecolor'])
         
+        # Настройка оси Y
+        if y_range is not None:
+            # Если задан явный диапазон
+            self.ax.set_ylim(y_range)
+        else:
+            # Автоматическая настройка с учетом малых различий
+            y_min = min(self.y_data)
+            y_max = max(self.y_data)
+            data_range = y_max - y_min
+            
+            if data_range < 0.1:  # Если различия маленькие
+                margin = data_range * y_margin  # Добавляем 10% от диапазона как отступ
+                self.ax.set_ylim(y_min - margin, y_max + margin)
+            else:
+                self.ax.set_ylim(0, None)  # Стандартное поведение
+        
+        # Добавляем значения на каждый столбец для наглядности
+        for bar in bars:
+            height = bar.get_height()
+            self.ax.text(bar.get_x() + bar.get_width()/2., height,
+                        f'{height:.6f}',  # Форматируем с 6 знаками после запятой
+                        ha='center', va='bottom',
+                        fontsize=8)
+        
         self.ax.set_xticks(index)
         self.ax.set_xticklabels(self.x_labels)
-        self.ax.set_ylim(0, None)
+        
+        self._configure_axes(x_label, y_label, title, grid)
+
+class ScatterGraph(BaseGraph):
+    """Класс для построения точечных графиков (scatter plot)"""
+    
+    def __init__(self):
+        super().__init__()
+        self.data_sets = []
+        self.legend_needed = False
+    
+    def add_data_set(self, *data_set):
+        """Добавляет новый набор данных для построения графика
+        
+        Аргументы:
+            data_set: Может быть одним из:
+                     - (x, y)
+                     - (x, y, params)
+        """
+        self.data_sets.append(data_set)
+        return self  # для возможности цепочки вызовов
+    
+    def build(self, x_label="X", y_label="Y", title="", grid=True):
+        self._setup_figure()
+        
+        default_params = {
+            'color': 'blue',
+            'marker': 'o',
+            'size': 20,
+            'alpha': 0.7,
+            'label': None,
+            'edgecolors': 'none'
+        }
+        
+        for data_set in self.data_sets:
+            if not (2 <= len(data_set) <= 3):
+                raise ValueError(f"Неверный формат данных. Ожидается 2 или 3 элемента, получено {len(data_set)}")
+            
+            if len(data_set) == 2:
+                x, y = data_set
+                params = default_params.copy()
+            else:
+                x, y, params = data_set
+                params = {**default_params, **params}
+                if params['label'] is not None:
+                    self.legend_needed = True
+            
+            self.ax.scatter(x, y, 
+                          c=params['color'],
+                          s=params['size'],
+                          marker=params['marker'],
+                          alpha=params['alpha'],
+                          label=params['label'],
+                          edgecolors=params['edgecolors'])
         
         self._configure_axes(x_label, y_label, title, grid)
 

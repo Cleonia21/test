@@ -7,6 +7,7 @@ from count import Count
 from data_updater import DataUpdater
 from error_handler import ErrorHandler
 from db_cache import DBCache
+from entities import *
 
 # Пример использования
 if __name__ == "__main__":
@@ -21,10 +22,10 @@ if __name__ == "__main__":
 
     db = DatabaseManager()
 
-    for i, type in enumerate(["Plane", "Rocket", "Purpose", "AirDefense", "Relief"]):
-        FormManager(db, window.forms_data[i], type, error_handler)
+    for i, type in enumerate(BASE_CLASSES_MAP.keys()):
+        FormManager(db, window.forms_data[i], type, cache, error_handler)
 
-    count = Count(db)
+    count = Count(db, cache)
 
     # Создаем объект для обновления данных
     data_updater = DataUpdater(
@@ -43,6 +44,21 @@ if __name__ == "__main__":
     graph = LinearGraph()
     graph.build(x_label="v", y_label="k")
     graph.display(window.chart_area_3)
+    
+    graph = LinearGraph()
+    graph.build(x_label="v", y_label="k")
+    graph.display(window.chart_area_4)
+
+    # Создаем случайные данные
+    np.random.seed(42)
+    x = np.random.rand(50) * 10
+    y = np.random.rand(50) * 10
+    sizes = np.random.rand(50) * 100
+
+    graph = ScatterGraph()
+    graph.add_data_set(x, y)
+    graph.build(x_label="v", y_label="k")
+    graph.display(window.chart_area_5)
 
     root.mainloop()
 

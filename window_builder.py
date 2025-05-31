@@ -29,6 +29,8 @@ class WindowBuilder:
         self.chart_area_1 = None    # Область для графика 1
         self.chart_area_2 = None    # Область для графика 2
         self.chart_area_3 = None    # Область для графика 3
+        self.chart_area_4 = None    # Область для графика 4
+        self.chart_area_5 = None    # Область для графика 5
         
         # Список объектов FormData для хранения информации о формах
         self.forms_data: FormData = []
@@ -67,19 +69,57 @@ class WindowBuilder:
         )
         self.edit_data_button.pack(side=tk.RIGHT, padx=5)
         
-        # Основная область с графиками
-        charts_paned = ttk.PanedWindow(main_frame, orient=tk.VERTICAL)
-        charts_paned.pack(fill=tk.BOTH, expand=True)
-
-        # Области для графиков
-        self.chart_area_1 = ttk.Frame(charts_paned)
-        charts_paned.add(self.chart_area_1, weight=1)
-
-        self.chart_area_2 = ttk.Frame(charts_paned)
-        charts_paned.add(self.chart_area_2, weight=1)
-
-        self.chart_area_3 = ttk.Frame(charts_paned)
-        charts_paned.add(self.chart_area_3, weight=1)
+        # Создаем прокручиваемую область для графиков
+        self._create_scrollable_charts_area(main_frame)
+    
+    def _create_scrollable_charts_area(self, parent):
+        """Создает прокручиваемую область для графиков"""
+        # Основной контейнер
+        container = ttk.Frame(parent)
+        container.pack(fill=tk.BOTH, expand=True)
+        
+        # Создаем Canvas и Scrollbar
+        canvas = tk.Canvas(container)
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Фрейм для графиков внутри Canvas
+        charts_frame = ttk.Frame(canvas)
+        canvas.create_window((0, 0), window=charts_frame, anchor="nw", tags="frame")
+        
+        # Создаем области для графиков
+        self.chart_area_1 = ttk.Frame(charts_frame, height=300, relief=tk.RAISED, borderwidth=1)
+        self.chart_area_1.pack(fill=tk.X, pady=5, padx=5, ipady=5)
+        
+        self.chart_area_2 = ttk.Frame(charts_frame, height=300, relief=tk.RAISED, borderwidth=1)
+        self.chart_area_2.pack(fill=tk.X, pady=5, padx=5, ipady=5)
+        
+        self.chart_area_3 = ttk.Frame(charts_frame, height=300, relief=tk.RAISED, borderwidth=1)
+        self.chart_area_3.pack(fill=tk.X, pady=5, padx=5, ipady=5)
+        
+        self.chart_area_4 = ttk.Frame(charts_frame, height=300, relief=tk.RAISED, borderwidth=1)
+        self.chart_area_4.pack(fill=tk.X, pady=5, padx=5, ipady=5)
+        
+        self.chart_area_5 = ttk.Frame(charts_frame, height=300, relief=tk.RAISED, borderwidth=1)
+        self.chart_area_5.pack(fill=tk.X, pady=5, padx=5, ipady=5)
+        
+        # Обновляем прокрутку при изменении размера
+        def _configure_scroll(event):
+            canvas.itemconfig("frame", width=event.width)
+            canvas.configure(scrollregion=canvas.bbox("all"))
+        
+        charts_frame.bind("<Configure>", _configure_scroll)
+        canvas.bind("<Configure>", lambda e: canvas.itemconfig("frame", width=e.width))
+        
+        # Добавляем поддержку прокрутки колесом мыши
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
     
     def _create_input_window(self):
         """Создает отдельное окно с формами ввода"""

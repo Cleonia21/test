@@ -4,7 +4,7 @@ from entities import *
 class DBCache:
     def __init__(self):
         # Инициализируем хранилища для каждого типа объектов
-        self._cache: Dict[Type, List[int]] = {
+        self._cache: Dict[BASE_CLASSES_TYPE, List[int]] = {
             Plane: [],
             Rocket: [],
             Purpose: [],
@@ -12,18 +12,18 @@ class DBCache:
             Relief: []
         }
     
-    def add_ids(self, obj_type: Type[Union[Plane, Rocket, Purpose, AirDefense, Relief]], ids: List[int]):
+    def add_ids(self, obj_type: BASE_CLASSES_TYPE, ids: List[int]):
         """Добавляет список ID для указанного типа объекта"""
         if obj_type in self._cache:
             self._cache[obj_type].extend(ids)
         else:
             raise ValueError(f"Unsupported object type: {obj_type}")
     
-    def get_ids(self, obj_type: Type[Union[Plane, Rocket, Purpose, AirDefense, Relief]]) -> List[int]:
+    def get_ids(self, obj_type: BASE_CLASSES_TYPE) -> List[int]:
         """Возвращает список ID для указанного типа объекта"""
         return self._cache.get(obj_type, [])
     
-    def clear_ids(self, obj_type: Type[Union[Plane, Rocket, Purpose, AirDefense, Relief]]):
+    def clear_ids(self, obj_type: BASE_CLASSES_TYPE):
         """Очищает кэш для указанного типа объекта"""
         if obj_type in self._cache:
             self._cache[obj_type] = []
@@ -33,7 +33,7 @@ class DBCache:
         for key in self._cache:
             self._cache[key] = []
     
-    def count(self, obj_type: Type[Union[Plane, Rocket, Purpose, AirDefense, Relief]]) -> int:
+    def count(self, obj_type: BASE_CLASSES_TYPE) -> int:
         """Возвращает количество ID для указанного типа объекта"""
         return len(self._cache.get(obj_type, []))
     
@@ -41,15 +41,15 @@ class DBCache:
         """Возвращает общее количество ID во всем кэше"""
         return sum(len(ids) for ids in self._cache.values())
     
-    def __contains__(self, item: tuple[Type[Union[Plane, Rocket, Purpose, AirDefense, Relief]], int]):
+    def __contains__(self, item: tuple[BASE_CLASSES_TYPE, int]):
         """Проверяет, содержится ли ID для указанного типа объекта в кэше"""
         obj_type, id_int = item
         return id_int in self._cache.get(obj_type, [])
     
     def __str__(self) -> str:
         """Строковое представление кэша"""
-        return "\n".join(
-            f"{cls.__name__}: {len(ids)} items" 
+        return " ".join(
+            f"{BASE_CLASSES_MAP[cls]}: {len(ids)} items" 
             for cls, ids in self._cache.items()
         )
     

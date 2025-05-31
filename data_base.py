@@ -166,6 +166,20 @@ class DatabaseManager:
 
         return obj
 
+    def get_all_objects(self, type: BASE_CLASSES_TYPE):
+        if type == Plane:
+            return self.get_all_planes()
+        elif type == Rocket:
+            return self.get_all_rockets()
+        elif type == Purpose:
+            return self.get_all_purposes()
+        elif type == AirDefense:
+            return self.get_all_air_defenses()
+        elif type == Relief:
+            return self.get_all_reliefs()
+        else:
+            raise ValueError(f"Unsupported type: {type}")
+
     # Методы для работы с Plane
     def save_plane(self, plane: Plane) -> int:
         """Сохраняет объект Plane в базу данных"""

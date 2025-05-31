@@ -5,6 +5,7 @@ from entities import *
 from dataclasses import dataclass
 from collections import defaultdict
 import bisect
+from db_cache import DBCache
 
 # Создаем экземпляр DatabaseManager
 db = DatabaseManager()
@@ -96,17 +97,41 @@ def degrees_to_radians(degrees):
     return degrees * (math.pi / 180)
 
 class Count():
-    def __init__(self, db: DatabaseManager):
+    def __init__(self, db: DatabaseManager, cache: DBCache):
         self.db = db
         self.data: CurrentDataSet = []
-        self._dataCollection()
+        self.cache = cache
 
-    def _dataCollection(self):
-        planes = self.db.get_all_planes()
-        rockets = self.db.get_all_rockets()
-        purposes = self.db.get_all_purposes()
-        air_defences = self.db.get_all_air_defenses()
-        reliefs = self.db.get_all_reliefs()
+    def dataCollection(self):
+        if self.cache.count(Plane):
+            ids = self.cache.get_ids(Plane)
+            planes = self.db.get_planes_by_ids(ids)
+        else:
+            planes = self.db.get_all_planes()
+
+        if self.cache.count(Rocket):
+            ids = self.cache.get_ids(Rocket)
+            rockets = self.db.get_rockets_by_ids(ids)
+        else:
+            rockets = self.db.get_all_rockets()
+
+        if self.cache.count(Purpose):
+            ids = self.cache.get_ids(Purpose)
+            purposes = self.db.get_purposes_by_ids(ids)
+        else:
+            purposes = self.db.get_all_purposes()
+
+        if self.cache.count(AirDefense):
+            ids = self.cache.get_ids(AirDefense)
+            air_defences = self.db.get_air_defenses_by_ids(ids)
+        else:
+            air_defences = self.db.get_all_air_defenses()
+
+        if self.cache.count(Relief):
+            ids = self.cache.get_ids(Relief)
+            reliefs = self.db.get_reliefs_by_ids(ids)
+        else:
+            reliefs = self.db.get_all_reliefs()
 
         if planes == None or rockets == None or purposes == None or air_defences == None or reliefs == None:
             raise Exception("Один из объектов из базы данных пустой")
@@ -134,6 +159,7 @@ class Count():
                                             self.data.append(currentDataSet)
 
     def count(self):
+        # self.dataCollection()
         planeNameAndNumByK = {}
         planeAndRocketNameByK = {}
         planeNameAndVAndHByK = {}
@@ -174,7 +200,7 @@ class Count():
         planeAndRocketNameByK2 = {}
         for (plane_name, plane_num), numberContainer in planeAndRocketNameByK.items():
             k = numberContainer.float_value / numberContainer.int_value
-            planeAndRocketNameByK2[plane_name + plane_num] = k
+            planeAndRocketNameByK2[plane_name + " " + plane_num] = k
 
         HeightByV = defaultdict(lambda: {"v": [], "k": []})
         for (plane_name, v, h), numberContainer in planeNameAndVAndHByK.items():
@@ -231,8 +257,8 @@ class Count():
         probab_average = self._choice(data.plane.P_detect, D3)
         p_z = self._P_z(data.plane.sigma_z, data.z)
         W_a_max = probab_average * p_z
-        if W_a_max > 1:
-            print(probab_average, data.plane.P_detect)
+        # if W_a_max > 1:
+        #     print(probab_average, data.plane.P_detect)
 
         D_ob = self._ZVA(probabSurlData)
         probab_average = self._choice(data.plane.P_detect, D_ob)

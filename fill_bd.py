@@ -9,34 +9,34 @@ def main():
         # Заполняем таблицу самолетов
         planes = [
             {
-                "name": "F-16",
-                "n_rocket": 4,
-                "sigma_z": 1.5,
-                "psi_max": 30.0,
-                "t_aim": 10.5,
-                "gap_max": 200.0,
-                "visibility": 0.9,
-                "P_detect": ([[0.1, 0.2], [0.3, 0.4]])
+                "name": "Су - 34",
+                "n_rocket": 6,
+                "sigma_z": 400.0,
+                "psi_max": 60.0,
+                "t_aim": 5.0,
+                "gap_max": 7,
+                "visibility": 3.0,
+                "P_detect": ([[0, 5000, 10000], [1.0, 0.5, 0]])
             },
             {
-                "name": "Su-35",
+                "name": "Cу - 25",
                 "n_rocket": 6,
-                "sigma_z": 1.2,
-                "psi_max": 35.0,
+                "sigma_z": 600.0,
+                "psi_max": 50,
                 "t_aim": 8.5,
-                "gap_max": 250.0,
-                "visibility": 0.8,
-                "P_detect": ([[0.2, 0.3], [0.4, 0.5]])
+                "gap_max": 6,
+                "visibility": 3.0,
+                "P_detect": ([[0, 4000, 8000], [1.0, 0.5, 0]])
             },
             {
-                "name": "F-22",
-                "n_rocket": 6,
-                "sigma_z": 0.8,
-                "psi_max": 40.0,
+                "name": "МиГ - 29",
+                "n_rocket": 4,
+                "sigma_z": 500.0,
+                "psi_max": 45.0,
                 "t_aim": 7.0,
-                "gap_max": 180.0,
-                "visibility": 0.7,
-                "P_detect": ([[0.05, 0.1], [0.15, 0.2]])
+                "gap_max": 9,
+                "visibility": 2.5,
+                "P_detect": ([[0, 1.0], [4000, 0.5], [8000, 0]])
             }
         ]
         
@@ -51,29 +51,22 @@ def main():
         # Заполняем таблицу ракет
         rockets = [
             {
-                "name": "AIM-120 AMRAAM",
-                "type": "воздух-воздух",
-                "R_min": 500.0,
-                "R_max": 18000.0,
-                "midle_speed": 1020.0,
-                "angle_effect": 60.0
-            },
-            {
-                "name": "R-77",
-                "type": "воздух-воздух",
-                "R_min": 300.0,
-                "R_max": 19000.0,
-                "midle_speed": 1000.0,
-                "angle_effect": 70.0
-            },
-            {
-                "name": "AGM-88 HARM",
-                "type": "воздух-земля",
-                "R_min": 1000.0,
-                "R_max": 15000.0,
-                "midle_speed": 950.0,
+                "name": "Х - 29Л",
+                "type": "фугас",
+                "R_min": 2000.0,
+                "R_max": 8000.0,
+                "midle_speed": 600.0,
                 "angle_effect": 45.0
-            }
+            },
+            {
+                "name": "Вихрь М",
+                "type": "кумулятив",
+                "R_min": 1500.0,
+                "R_max": 8000.0,
+                "midle_speed": 8000.0,
+                "angle_effect": 45.0
+            },
+
         ]
         
         print("\nДобавляем ракеты:")
@@ -87,35 +80,16 @@ def main():
         # Заполняем таблицу целей
         purposes = [
             {
-                "name": "Военный завод",
-                "a": 500.0,
-                "b": 300.0,
-                "h": 50.0,
-                "R_defeat": 100.0,
-                "average_number": 1.5,
-                "x_purpose": 10000.0,
-                "y_purpose": 5000.0
+                "name": "Элементарная цель",
+                "a": 7.5,
+                "b": 3.5,
+                "h": 2.5,
+                "R_defeat": 2.0,
+                "average_number": 3.0,
+                "x_purpose": 0.0,
+                "y_purpose": 0.0
             },
-            {
-                "name": "Аэродром",
-                "a": 2000.0,
-                "b": 1500.0,
-                "h": 10.0,
-                "R_defeat": 200.0,
-                "average_number": 2.0,
-                "x_purpose": 15000.0,
-                "y_purpose": 8000.0
-            },
-            {
-                "name": "Радарная станция",
-                "a": 100.0,
-                "b": 100.0,
-                "h": 20.0,
-                "R_defeat": 50.0,
-                "average_number": 1.0,
-                "x_purpose": 12000.0,
-                "y_purpose": 6000.0
-            }
+
         ]
         
         print("\nДобавляем цели:")
@@ -129,59 +103,23 @@ def main():
         # Заполняем таблицу систем ПВО
         air_defenses = [
             {
-                "name": "S-300",
-                "n_defense": 4,
-                "n_rocket_d": 8,
-                "v_defense": 2000.0,
+                "name": "Роланд 2",
+                "n_defense": 3,
+                "n_rocket_d": 4,
+                "v_defense": 500.0,
                 "t_passive": 5.0,
                 "t_changing": 10.0,
-                "t_def": 15.0,
-                "x_defense": [1000.0, 2000.0, 3000.0, 4000.0],
-                "y_defense": [500.0, 1500.0, 2500.0, 3500.0],
+                "t_def": 3.0,
+                "x_defense": [0.0, 2000.0, 3000.0],
+                "y_defense": [0.0, 1500.0, 2500.0],
                 "l_min": 500.0,
-                "l_max": 40000.0,
+                "l_max": 6000.0,
                 "angle_effect": 90.0,
-                "width_defense": 120.0,
-                "h_max": 27000.0,
-                "P_defeat": 0.8,
-                "P_detect": ([[0.7, 0.8], [0.85, 0.9]])
+                "width_defense": 5000.0,
+                "h_max": 5000.0,
+                "P_defeat": 0.6,
+                "P_detect": ([[0, 1.0], [20000, 0.5], [40000, 0.0]])
             },
-            {
-                "name": "Patriot",
-                "n_defense": 6,
-                "n_rocket_d": 12,
-                "v_defense": 1800.0,
-                "t_passive": 4.0,
-                "t_changing": 8.0,
-                "t_def": 12.0,
-                "x_defense": [5000.0, 6000.0, 7000.0, 8000.0, 9000.0, 10000.0],
-                "y_defense": [2000.0, 3000.0, 4000.0, 5000.0, 6000.0, 7000.0],
-                "l_min": 1000.0,
-                "l_max": 35000.0,
-                "angle_effect": 120.0,
-                "width_defense": 90.0,
-                "h_max": 24000.0,
-                "P_defeat": 0.75,
-                "P_detect": ([[0.6, 0.7], [0.75, 0.8]])
-            },
-            {
-                "name": "Iron Dome",
-                "n_defense": 8,
-                "n_rocket_d": 16,
-                "v_defense": 1500.0,
-                "t_passive": 3.0,
-                "t_changing": 6.0,
-                "t_def": 9.0,
-                "x_defense": [11000.0, 12000.0, 13000.0, 14000.0, 15000.0, 16000.0, 17000.0, 18000.0],
-                "y_defense": [8000.0, 9000.0, 10000.0, 11000.0, 12000.0, 13000.0, 14000.0, 15000.0],
-                "l_min": 2000.0,
-                "l_max": 30000.0,
-                "angle_effect": 150.0,
-                "width_defense": 60.0,
-                "h_max": 20000.0,
-                "P_defeat": 0.85,
-                "P_detect": ([[0.8, 0.85], [0.9, 0.95]])
-            }
         ]
         
         print("\nДобавляем системы ПВО:")
@@ -196,16 +134,9 @@ def main():
         reliefs = [
             {
                 "name": "Равнина",
-                "P_see": ([[0.9, 0.95], [0.98, 1.0]])
+                "P_see": ([[0.0, 1.0], [5000, 0.75], [10000, 0.42], [20000, 0.12], [30000, 0.0]])
             },
-            {
-                "name": "Холмистая местность",
-                "P_see": ([[0.7, 0.8], [0.85, 0.9]])
-            },
-            {
-                "name": "Горная местность",
-                "P_see": ([[0.5, 0.6], [0.65, 0.75]])
-            }
+
         ]
         
         print("\nДобавляем рельефы:")

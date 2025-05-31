@@ -184,6 +184,8 @@ class Count():
                 planeNameAndVAndHByK[(data_K.plane_name, data_K.v, data_K.h)] += numberContainer
             else:
                 planeNameAndVAndHByK[(data_K.plane_name, data_K.v, data_K.h)] = numberContainer
+        
+        self.data: CurrentDataSet = []
 
         bestPlane = ""
         bestPlaneK = 0

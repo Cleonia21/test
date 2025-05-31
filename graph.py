@@ -4,6 +4,7 @@ from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 import copy
+from matplotlib import ticker
 
 class BaseGraph:
     """Базовый класс для графиков с общими методами"""
@@ -167,62 +168,8 @@ class BaseGraph:
         
         self.figure.tight_layout()
 
-
-class LinearGraph(BaseGraph):
-    """Класс для построения линейных графиков с возможностью постепенного добавления данных"""
-    
-    def __init__(self):
-        super().__init__()
-        self.data_sets = []
-        self.legend_needed = False
-    
-    def add_data_set(self, *data_set):
-        """Добавляет новый набор данных для построения графика
-        
-        Аргументы:
-            data_set: Может быть одним из:
-                     - (x, y)
-                     - (x, y, params)
-        """
-        self.data_sets.append(data_set)
-        return self  # для возможности цепочки вызовов
-    
-    def build(self, x_label="X", y_label="Y", title="", grid=True):
-        self._setup_figure()
-        
-        default_params = {
-            'color': None,
-            'linewidth': 2,
-            'marker': 'o',
-            'linestyle': '-',
-            'label': None,
-        }
-        
-        for data_set in self.data_sets:
-            if not (2 <= len(data_set) <= 3):
-                raise ValueError(f"Неверный формат данных. Ожидается 2 или 3 элемента, получено {len(data_set)}")
-            
-            if len(data_set) == 2:
-                x, y = data_set
-                params = default_params.copy()
-            else:
-                x, y, params = data_set
-                params = {**default_params, **params}
-                if params['label'] is not None:
-                    self.legend_needed = True
-            
-            self.ax.plot(x, y, 
-                        color=params['color'],
-                        linewidth=params['linewidth'],
-                        marker=params['marker'],
-                        linestyle=params['linestyle'],
-                        label=params['label'])
-        
-        self._configure_axes(x_label, y_label, title, grid)
-
-
 class BarGraph(BaseGraph):
-    """Класс для построения столбчатых диаграмм"""
+    """Класс для построения столбчатых диаграмм с улучшенным масштабированием для малых различий"""
     
     def __init__(self, x_labels, y_data, params=None):
         super().__init__()
@@ -254,21 +201,28 @@ class BarGraph(BaseGraph):
                    label=params['label'],
                    edgecolor=params['edgecolor'])
         
-        # Настройка оси Y
+        # Улучшенная настройка оси Y для малых различий
+        y_min = min(self.y_data)
+        y_max = max(self.y_data)
+        data_range = y_max - y_min
+        
         if y_range is not None:
             # Если задан явный диапазон
             self.ax.set_ylim(y_range)
-        else:
-            # Автоматическая настройка с учетом малых различий
-            y_min = min(self.y_data)
-            y_max = max(self.y_data)
-            data_range = y_max - y_min
+        elif data_range < 0.1 * y_max:  # Если различия маленькие относительно масштаба
+            # Центрируем диапазон вокруг среднего значения
+            center = (y_max + y_min) / 2
+            margin = data_range * (1 + y_margin) / 2  # Добавляем отступы
+            self.ax.set_ylim(center - margin, center + margin)
             
-            if data_range < 0.1:  # Если различия маленькие
-                margin = data_range * y_margin  # Добавляем 10% от диапазона как отступ
-                self.ax.set_ylim(y_min - margin, y_max + margin)
-            else:
-                self.ax.set_ylim(0, None)  # Стандартное поведение
+            # Настраиваем количество делений для лучшей читаемости
+            self.ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins=5))
+        else:
+            # Стандартное поведение для больших диапазонов
+            self.ax.set_ylim(max(0, y_min - data_range * y_margin), y_max + data_range * y_margin)
+        
+        # Форматирование подписей на оси Y
+        self.ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%.6f'))
         
         # Добавляем значения на каждый столбец для наглядности
         for bar in bars:
@@ -280,6 +234,77 @@ class BarGraph(BaseGraph):
         
         self.ax.set_xticks(index)
         self.ax.set_xticklabels(self.x_labels)
+        
+        self._configure_axes(x_label, y_label, title, grid)
+
+
+class LinearGraph(BaseGraph):
+    """Класс для построения линейных графиков с улучшенным масштабированием для малых различий"""
+    
+    def __init__(self):
+        super().__init__()
+        self.data_sets = []
+        self.legend_needed = False
+    
+    def add_data_set(self, *data_set):
+        """Добавляет новый набор данных для построения графика"""
+        self.data_sets.append(data_set)
+        return self
+    
+    def build(self, x_label="X", y_label="Y", title="", grid=True, y_margin=0.1):
+        self._setup_figure()
+        
+        default_params = {
+            'color': None,
+            'linewidth': 2,
+            'marker': 'o',
+            'linestyle': '-',
+            'label': None,
+        }
+        
+        # Собираем все y-значения для определения диапазона
+        all_y = []
+        
+        for data_set in self.data_sets:
+            if not (2 <= len(data_set) <= 3):
+                raise ValueError(f"Неверный формат данных. Ожидается 2 или 3 элемента, получено {len(data_set)}")
+            
+            if len(data_set) == 2:
+                x, y = data_set
+                params = default_params.copy()
+            else:
+                x, y, params = data_set
+                params = {**default_params, **params}
+                if params['label'] is not None:
+                    self.legend_needed = True
+            
+            self.ax.plot(x, y, 
+                        color=params['color'],
+                        linewidth=params['linewidth'],
+                        marker=params['marker'],
+                        linestyle=params['linestyle'],
+                        label=params['label'])
+            
+            all_y.extend(y)
+        
+        # Улучшенная настройка оси Y для малых различий
+        if len(all_y) > 0:
+            y_min = min(all_y)
+            y_max = max(all_y)
+            data_range = y_max - y_min
+            
+            if data_range < 0.1 * (abs(y_max) + abs(y_min)) / 2:  # Если различия маленькие
+                # Центрируем диапазон вокруг среднего значения
+                center = (y_max + y_min) / 2
+                margin = data_range * (1 + y_margin) / 2
+                self.ax.set_ylim(center - margin, center + margin)
+                
+                # Настраиваем количество делений для лучшей читаемости
+                self.ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins=5))
+                self.ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%.6f'))
+            else:
+                # Стандартное поведение для больших диапазонов
+                self.ax.set_ylim(y_min - data_range * y_margin, y_max + data_range * y_margin)
         
         self._configure_axes(x_label, y_label, title, grid)
 
